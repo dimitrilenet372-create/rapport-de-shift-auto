@@ -154,7 +154,7 @@ const norm=t=>String(t).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().tr
 const arr=v=>Array.isArray(v)?v:(v&&typeof v==="object"?Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]):[]);
 function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 function clean(x){const b=blank();x=x||{};return{
-  tasks:Object.assign(b.tasks,x.tasks||{}),the:x.the||"",ast:arr(x.ast).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??"")})),
+  tasks:Array.isArray(x.tasks)?Object.fromEntries(TASKS.map((t,i)=>[t,STATES.includes(x.tasks[i])?x.tasks[i]:"/"])):Object.assign(b.tasks,x.tasks||{}),the:x.the||"",ast:arr(x.ast).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??"")})),
   mab:arr(x.mab).map(String),arr:arr(x.arr).map(String),rec:arr(x.rec).map(String),strip:arr(x.strip).map(String),
   pdjPax:String(x.pdjPax??""),pdjTables:x.pdjTables||"",notes:x.notes||""}}
 
@@ -230,9 +230,13 @@ function setSync(t){$("sync").textContent=t}
 let dbRef=null,syncReady=false,pushTimer=null;
 function commit(){updated=Date.now();saveLocal();refresh();schedulePush()}
 function schedulePush(){if(!syncReady)return;clearTimeout(pushTimer);pushTimer=setTimeout(push,400)}
+/* Firebase refuse les clés avec "/" ou "." : les tâches sont envoyées sous forme de liste, dans l'ordre */
+const toRemote=()=>({s:Object.assign({},s,{tasks:TASKS.map(t=>s.tasks[t])}),rooms,updated});
 function push(extra){
   if(!syncReady||!dbRef)return Promise.resolve();setSync("☁️ Envoi…");
-  return set(dbRef,Object.assign({s,rooms,updated},extra||{})).then(()=>setSync("☁️ Synchronisé")).catch(e=>{console.error(e);setSync("⚠️ Synchro impossible")});
+  try{
+    return set(dbRef,Object.assign(toRemote(),extra||{})).then(()=>setSync("☁️ Synchronisé")).catch(e=>{console.error(e);setSync("⚠️ Synchro impossible")});
+  }catch(e){console.error(e);setSync("⚠️ Synchro impossible");return Promise.resolve()}
 }
 function applyRemote(r){
   s=clean(r.s);if(r.rooms)rooms=arr(r.rooms).map(String);updated=r.updated||0;saveLocal();renderAll();
