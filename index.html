@@ -78,7 +78,7 @@
 
 <div class="card claude-card">
   <h2>Remplir avec Claude</h2>
-  <p>① Claude lit Asterio sur ton Mac (Chrome allumé, connecté à Asterio). ② Copie sa réponse, puis « Coller la réponse » : tout se remplit.</p>
+  <p id="claudeHelp">① Claude lit Asterio sur ton Mac (Chrome allumé, connecté à Asterio). ② Copie sa réponse, puis « Coller la réponse » : tout se remplit.</p>
   <div class="steps">
     <a class="btn cl" id="claudeBtn" href="#" target="_blank" rel="noopener">① Lancer Claude</a>
     <button class="btn cl-2" id="pasteBtn">② Coller la réponse</button>
@@ -132,6 +132,8 @@
     <input type="text" id="roomsCfg" placeholder="1,2,3,4,5,6,7,8,9,10">
     <label for="asterioCfg">Adresse Asterio (reste sur ce téléphone)</label>
     <input type="url" id="asterioCfg" placeholder="https://…myasterio.com">
+    <label for="convCfg">Conversation Claude à réutiliser (garde l'onglet Asterio connecté)</label>
+    <input type="url" id="convCfg" placeholder="https://claude.ai/…">
   </details>
 </div>
 
@@ -148,12 +150,13 @@ const KEY="rapportShift_v1";
 const blank=()=>({tasks:Object.fromEntries(TASKS.map(t=>[t,"/"])),the:"",ast:[],mab:[],arr:[],rec:[],strip:[],pdjPax:"",pdjTables:"",notes:""});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let asterioUrl="";
+let convUrl="";
 let repDate=todayISO();
 let s=blank();
 
 function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
-function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=d.rooms;if(d.asterioUrl)asterioUrl=d.asterioUrl;if(d.s)s=Object.assign(blank(),d.s);}}catch(e){}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({rooms,asterioUrl,s}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=d.rooms;if(d.asterioUrl)asterioUrl=d.asterioUrl;if(d.convUrl)convUrl=d.convUrl;if(d.s)s=Object.assign(blank(),d.s);}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({rooms,asterioUrl,convUrl,s}))}catch(e){}}
 
 const $=id=>document.getElementById(id);
 const sortRooms=a=>[...a].sort((x,y)=>(parseFloat(x)||0)-(parseFloat(y)||0)||x.localeCompare(y));
@@ -220,11 +223,11 @@ function claudePrompt(){
   const soir=fmtDate(repDate,0), lendemain=fmtDate(repDate,1);
   return [
 `Fais mon rapport de shift du soir du ${soir}.`,
-`Utilise Claude in Chrome sur mon Mac : je suis connecté à Asterio${asterioUrl?" ("+asterioUrl+")":""}. Va dans le planning Hébergement.`,
+`Utilise Claude in Chrome sur mon Mac. Si un onglet Asterio${asterioUrl?" ("+asterioUrl+")":""} est déjà ouvert et connecté dans ton groupe d'onglets, réutilise-le : n'ouvre pas de nouvel onglet. Sinon ouvre Asterio ; si la page de connexion s'affiche, arrête-toi et dis-moi de me connecter dans cet onglet. Va dans le planning Hébergement.`,
 `- INFO ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre de personnes ("#2 : 2 pax").`,
 `- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
 `- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier) de chaque chambre occupée et compte les lignes "Petit-déjeuner" (les observations ne suffisent pas). Donne le total de pax et les tables.`,
-`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER.`,
+`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER. À la fin, laisse l'onglet Asterio ouvert pour la prochaine fois.`,
 `Réponds avec le rapport exactement dans ce format, sans rien changer aux titres :`,
 `RAPPORT DE SHIFT:`,
 ``,
@@ -245,7 +248,13 @@ function claudePrompt(){
 `Mets "/" quand il n'y a rien.`
   ].join("\n");
 }
-function updateClaudeLink(){$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt())}
+function updateClaudeLink(){
+  $("claudeBtn").href=convUrl?convUrl:"https://claude.ai/new?q="+encodeURIComponent(claudePrompt());
+  $("claudeBtn").textContent=convUrl?"① Ouvrir ma conversation Claude":"① Lancer Claude";
+  $("claudeHelp").textContent=convUrl
+    ?"① La demande est copiée : colle-la dans ta conversation Claude, qui réutilise l'onglet Asterio déjà connecté. ② Copie sa réponse, puis « Coller la réponse »."
+    :"① Claude lit Asterio sur ton Mac (Chrome allumé, connecté à Asterio). ② Copie sa réponse, puis « Coller la réponse » : tout se remplit.";
+}
 
 function parseReport(txt){
   const ns=blank();let section="";let found=false;
@@ -302,6 +311,7 @@ function bindInputs(){
     $(id).value=s[k];$(id).oninput=()=>{s[k]=$(id).value;update()}});
   $("roomsCfg").value=rooms.join(",");
   $("asterioCfg").value=asterioUrl;
+  $("convCfg").value=convUrl;
   $("repDate").value=repDate;
 }
 function renderAll(){renderTasks();renderChips();renderAst();bindInputs();update()}
@@ -309,9 +319,10 @@ function renderAll(){renderTasks();renderChips();renderAst();bindInputs();update
 $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1"});renderAst();update()};
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();save();toast("Chambres mises à jour")}};
 $("asterioCfg").onchange=()=>{asterioUrl=$("asterioCfg").value.trim();update();toast("Adresse enregistrée")};
+$("convCfg").onchange=()=>{convUrl=$("convCfg").value.trim();update();toast(convUrl?"Conversation enregistrée":"Retour à une nouvelle conversation")};
 $("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();updateClaudeLink()};
 $("claudeBtn").addEventListener("click",()=>{
-  try{navigator.clipboard.writeText(claudePrompt()).then(()=>toast("Demande copiée — colle-la si Claude s'ouvre vide"),()=>{})}catch(e){}
+  try{navigator.clipboard.writeText(claudePrompt()).then(()=>toast(convUrl?"Demande copiée — colle-la dans la conversation":"Demande copiée — colle-la si Claude s'ouvre vide"),()=>{})}catch(e){}
 });
 $("pasteBtn").onclick=async()=>{
   let txt="";
