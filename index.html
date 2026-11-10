@@ -147,7 +147,7 @@ const STATES=["/","À voir","À faire","Fait"];
 const KEY="rapportShift_v1";
 const blank=()=>({tasks:Object.fromEntries(TASKS.map(t=>[t,"/"])),the:"",ast:[],mab:[],arr:[],rec:[],strip:[],pdjPax:"",pdjTables:"",notes:""});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
-let asterioUrl="";
+let asterioUrl="https://lesquissebarbizon-77630.myasterio.com/";
 let repDate=todayISO();
 let s=blank();
 
@@ -220,7 +220,7 @@ function claudePrompt(){
   const soir=fmtDate(repDate,0), lendemain=fmtDate(repDate,1);
   return [
 `Fais mon rapport de shift du soir du ${soir}.`,
-`Utilise Claude in Chrome sur mon Mac. Ouvre un onglet sur ${asterioUrl||"mon Asterio"} :`,
+`Utilise Claude in Chrome sur mon Mac. D'abord, regarde les onglets de ton groupe : s'il y a déjà un onglet Asterio, prends-le et n'en ouvre pas d'autre. Sinon, ouvre un seul onglet sur ${asterioUrl} :`,
 `1. Si la page de connexion s'affiche, l'identifiant et le mot de passe sont déjà remplis par Chrome : clique simplement sur SE CONNECTER (je t'y autorise, ne tape rien). Si une fenêtre propose la double authentification, clique PLUS TARD.`,
 `2. Ne tape jamais de code PIN : ouvre le menu (icône grille en haut à gauche) puis Front-Office. Le planning Hébergement s'affiche.`,
 `3. Lis le planning : une réservation qui couvre la colonne du ${soir} = chambre occupée cette nuit. Clique sur chaque réservation pour voir l'occupation (nombre d'adultes) et les dates.`,
