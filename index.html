@@ -28,6 +28,9 @@
   .claude-card{border-color:var(--claude);background:var(--claude-soft)}
   .claude-card h2{color:var(--claude)}
   .claude-card p{font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.4}
+  .modeseg{display:grid;grid-template-columns:1fr 1fr;margin-bottom:10px;background:var(--card)}
+  .modeseg button{font-size:13px;padding:8px 6px}
+  .modeseg button.on{background:var(--claude);color:#fff}
   .steps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
   .row:first-of-type{border-top:none}
@@ -78,10 +81,15 @@
 
 <div class="card claude-card">
   <h2>Remplir avec Claude</h2>
-  <p>① Copie la demande et colle-la <b>toujours dans la même conversation Claude</b> (épingle-la) : c'est elle qui garde l'onglet Asterio connecté sur le Mac. ② Copie la réponse de Claude, puis « Coller la réponse ».</p>
+  <div class="seg modeseg" id="modeSeg">
+    <button data-m="mac">💻 Asterio sur le Mac</button>
+    <button data-m="phone">📱 Asterio sur le téléphone</button>
+  </div>
+  <p id="claudeHelp"></p>
+  <a class="btn cl-2 hidden" id="asterioBtn" href="#" target="_blank" rel="noopener" style="margin-bottom:8px">① Ouvrir Asterio et faire les captures</a>
   <div class="steps">
-    <a class="btn cl" id="claudeBtn" href="https://claude.ai/" target="_blank" rel="noopener">① Copier et ouvrir Claude</a>
-    <button class="btn cl-2" id="pasteBtn">② Coller la réponse</button>
+    <a class="btn cl" id="claudeBtn" href="https://claude.ai/" target="_blank" rel="noopener">Copier et ouvrir Claude</a>
+    <button class="btn cl-2" id="pasteBtn">Coller la réponse</button>
   </div>
   <div id="pasteBox" class="hidden" style="margin-top:10px">
     <textarea id="pasteArea" placeholder="Colle ici le rapport donné par Claude"></textarea>
@@ -148,12 +156,13 @@ const KEY="rapportShift_v1";
 const blank=()=>({tasks:Object.fromEntries(TASKS.map(t=>[t,"/"])),the:"",ast:[],mab:[],arr:[],rec:[],strip:[],pdjPax:"",pdjTables:"",notes:""});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let asterioUrl="";
+let mode="mac";
 let repDate=todayISO();
 let s=blank();
 
 function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
-function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=d.rooms;if(d.asterioUrl)asterioUrl=d.asterioUrl;if(d.s)s=Object.assign(blank(),d.s);}}catch(e){}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({rooms,asterioUrl,s}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=d.rooms;if(d.asterioUrl)asterioUrl=d.asterioUrl;if(d.mode)mode=d.mode;if(d.s)s=Object.assign(blank(),d.s);}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({rooms,asterioUrl,mode,s}))}catch(e){}}
 
 const $=id=>document.getElementById(id);
 const sortRooms=a=>[...a].sort((x,y)=>(parseFloat(x)||0)-(parseFloat(y)||0)||x.localeCompare(y));
@@ -220,11 +229,20 @@ function claudePrompt(){
   const soir=fmtDate(repDate,0), lendemain=fmtDate(repDate,1);
   return [
 `Fais mon rapport de shift du soir du ${soir}.`,
+...(mode==="phone"?[
+`Utilise uniquement les captures d'écran d'Asterio jointes à ce message (planning Hébergement + dossiers des chambres). N'utilise pas Chrome.`,
+`Lecture du planning : chaque colonne est une nuit ; une réservation qui commence au milieu d'une colonne arrive ce jour-là, une qui finit au milieu d'une colonne part ce jour-là.`,
+`- INFO ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre de personnes ("#2 : 2 pax").`,
+`- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
+`- PDJ du ${lendemain} matin : compte les lignes "Petit-déjeuner" dans les dossiers (folio). S'il manque le dossier d'une chambre occupée, dis-le dans PRÉCISIONS. Donne le total de pax et les tables.`,
+`Si une capture est illisible ou s'il manque une info, signale-le dans PRÉCISIONS au lieu de deviner.`
+]:[
 `Utilise Claude in Chrome sur mon Mac. Regarde d'abord les onglets de ton groupe : si un onglet Asterio est déjà ouvert et connecté, réutilise-le et n'ouvre surtout pas de nouvel onglet. Sinon ouvre un seul onglet Asterio${asterioUrl?" ("+asterioUrl+")":""} ; si la page de connexion s'affiche, arrête-toi et dis-moi de me connecter dans cet onglet. Va dans le planning Hébergement.`,
 `- INFO ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre de personnes ("#2 : 2 pax").`,
 `- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
 `- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier) de chaque chambre occupée et compte les lignes "Petit-déjeuner" (les observations ne suffisent pas). Donne le total de pax et les tables.`,
-`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER. À la fin, laisse l'onglet Asterio ouvert pour la prochaine fois.`,
+`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER. À la fin, laisse l'onglet Asterio ouvert pour la prochaine fois.`
+]),
 `Réponds avec le rapport exactement dans ce format, sans rien changer aux titres :`,
 `RAPPORT DE SHIFT:`,
 ``,
@@ -245,7 +263,17 @@ function claudePrompt(){
 `Mets "/" quand il n'y a rien.`
   ].join("\n");
 }
-function updateClaudeLink(){$("claudeBtn").href="https://claude.ai/"}
+function updateClaudeLink(){
+  const phone=mode==="phone";
+  document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));
+  $("asterioBtn").classList.toggle("hidden",!phone);
+  $("asterioBtn").href=asterioUrl||"#";
+  $("claudeBtn").textContent=phone?"② Copier et ouvrir Claude":"① Copier et ouvrir Claude";
+  $("pasteBtn").textContent=phone?"③ Coller la réponse":"② Coller la réponse";
+  $("claudeHelp").innerHTML=phone
+    ?"① Dans Asterio sur ton téléphone, fais une capture du <b>planning</b> (soir + lendemain) et du <b>dossier</b> de chaque chambre occupée (pour le PDJ). ② Colle la demande dans Claude et <b>joins les captures</b>. ③ Copie sa réponse, puis « Coller la réponse »."
+    :"① Colle la demande <b>toujours dans la même conversation Claude</b> (épingle-la) : Claude lit Asterio sur le Mac, dans l'onglet déjà connecté. ② Copie sa réponse, puis « Coller la réponse ».";
+}
 
 function parseReport(txt){
   const ns=blank();let section="";let found=false;
@@ -310,6 +338,8 @@ $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1"});renderAst();upd
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();save();toast("Chambres mises à jour")}};
 $("asterioCfg").onchange=()=>{asterioUrl=$("asterioCfg").value.trim();update();toast("Adresse enregistrée")};
 $("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();updateClaudeLink()};
+document.querySelectorAll("#modeSeg button").forEach(b=>b.onclick=()=>{mode=b.dataset.m;update()});
+$("asterioBtn").addEventListener("click",e=>{if(!asterioUrl){e.preventDefault();toast("Ajoute l'adresse Asterio dans Réglages")}});
 $("claudeBtn").addEventListener("click",()=>{
   try{navigator.clipboard.writeText(claudePrompt()).then(()=>toast("Demande copiée — colle-la dans ta conversation Claude"),()=>{})}catch(e){}
 });
