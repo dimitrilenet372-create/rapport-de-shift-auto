@@ -73,10 +73,10 @@
 
 <div class="card">
   <div class="clrow">
-    <button class="btn cl" id="claudeBtn">🤖 Copier la demande</button>
+    <a class="btn cl" id="claudeBtn" href="https://claude.ai/new" target="_blank" rel="noopener">🤖 Faire le rapport avec Claude</a>
     <input type="date" id="repDate" aria-label="Soir du rapport">
   </div>
-  <p class="note">Colle la demande dans ta conversation Claude reliée au Mac. Claude lit Asterio et <b>le rapport arrive tout seul ici</b>. Il ne te reste qu'à compléter les tâches.</p>
+  <p class="note">Claude s'ouvre avec la demande déjà écrite : appuie sur Envoyer. Il lit Asterio sur le Mac et <b>le rapport arrive tout seul ici</b>. Il ne te reste qu'à compléter les tâches.</p>
 </div>
 
 <div class="card">
@@ -342,12 +342,11 @@ function claudePrompt(){
 
 /* ---------- événements ---------- */
 $("repDate").value=repDate;
-$("repDate").onchange=()=>{repDate=$("repDate").value||todayISO()};
-$("claudeBtn").onclick=async()=>{
-  const p=claudePrompt();
-  try{await navigator.clipboard.writeText(p);toast("Demande copiée ✓ — colle-la dans Claude")}
-  catch(e){$("pasteArea").value=p;$("pasteArea").closest("details").open=true;$("pasteArea").select();toast("Copie manuelle : le texte est en bas")}
-};
+const setClaudeLink=()=>{$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt())};
+setClaudeLink();
+$("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();setClaudeLink()};
+/* la demande est aussi copiée, au cas où Claude s'ouvrirait vide */
+$("claudeBtn").addEventListener("click",()=>{try{navigator.clipboard.writeText(claudePrompt()).catch(()=>{})}catch(e){}});
 $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1"});renderAst();commit()};
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();commit();toast("Chambres mises à jour")}};
 $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
