@@ -78,7 +78,7 @@
 
 <div class="card claude-card">
   <h2>Remplir avec Claude</h2>
-  <p>① Claude lit Asterio sur ton Mac (Chrome allumé, connecté à Asterio). ② Copie sa réponse, puis « Coller la réponse » : tout se remplit.</p>
+  <p>① Claude ouvre Asterio dans Chrome sur ton Mac, se connecte, lit le planning et les dossiers (Mac allumé, Chrome ouvert). ② Copie sa réponse, puis « Coller la réponse » : tout se remplit.</p>
   <div class="steps">
     <a class="btn cl" id="claudeBtn" href="#" target="_blank" rel="noopener">① Lancer Claude</a>
     <button class="btn cl-2" id="pasteBtn">② Coller la réponse</button>
@@ -220,11 +220,14 @@ function claudePrompt(){
   const soir=fmtDate(repDate,0), lendemain=fmtDate(repDate,1);
   return [
 `Fais mon rapport de shift du soir du ${soir}.`,
-`Utilise Claude in Chrome sur mon Mac : je suis connecté à Asterio${asterioUrl?" ("+asterioUrl+")":""}. Va dans le planning Hébergement.`,
+`Utilise Claude in Chrome sur mon Mac. Ouvre un onglet sur ${asterioUrl||"mon Asterio"} :`,
+`1. Si la page de connexion s'affiche, l'identifiant et le mot de passe sont déjà remplis par Chrome : clique simplement sur SE CONNECTER (je t'y autorise, ne tape rien). Si une fenêtre propose la double authentification, clique PLUS TARD.`,
+`2. Ne tape jamais de code PIN : ouvre le menu (icône grille en haut à gauche) puis Front-Office. Le planning Hébergement s'affiche.`,
+`3. Lis le planning : une réservation qui couvre la colonne du ${soir} = chambre occupée cette nuit. Clique sur chaque réservation pour voir l'occupation (nombre d'adultes) et les dates.`,
 `- INFO ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre de personnes ("#2 : 2 pax").`,
-`- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
-`- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier) de chaque chambre occupée et compte les lignes "Petit-déjeuner" (les observations ne suffisent pas). Donne le total de pax et les tables.`,
-`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER.`,
+`- NETTOYAGE pour le ${lendemain} : MÀB = départs du ${lendemain}, Arrivées = arrivées du ${lendemain}, Recouche = clients présents cette nuit qui restent la nuit suivante.`,
+`- PDJ du ${lendemain} matin : pour chaque chambre occupée cette nuit, ouvre le dossier (icône dossier en haut à gauche de la fiche) et compte les lignes "Petit-déjeuner" (quantité = nombre de pax ; les observations ne suffisent pas). Si le tarif inclut les petits-déjeuners (ex. "Hébergement NANR et petits-déjeuners") sans ligne séparée, compte le nombre d'adultes. Donne le total de pax et les tables (une table par chambre, ex. "1 table de 3, 2 tables de 2").`,
+`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER. Laisse l'onglet Asterio ouvert à la fin.`,
 `Réponds avec le rapport exactement dans ce format, sans rien changer aux titres :`,
 `RAPPORT DE SHIFT:`,
 ``,
@@ -242,7 +245,7 @@ function claudePrompt(){
 `PRÉCISIONS`,
 `(points à vérifier, ou /)`,
 ``,
-`Mets "/" quand il n'y a rien.`
+`Mets "/" quand il n'y a rien. Termine par "Bonne soirée à tous 😊". N'ajoute rien d'autre après le rapport, pour que je puisse le copier d'un coup.`
   ].join("\n");
 }
 function updateClaudeLink(){$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt())}
