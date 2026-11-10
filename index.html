@@ -12,17 +12,23 @@
   :root{
     --bg:#f4f5f7;--card:#fff;--ink:#16181d;--muted:#6b7280;--line:#e5e7eb;
     --acc:#2563eb;--acc-soft:#e0e9ff;--wa:#1faa59;--warn:#d97706;--todo:#dc2626;--ok:#16a34a;
+    --claude:#d97757;--claude-soft:#fbeee8;
   }
   @media (prefers-color-scheme:dark){
-    :root{--bg:#0f1115;--card:#181b21;--ink:#eef0f3;--muted:#9aa1ad;--line:#2a2f38;--acc:#5b8cff;--acc-soft:#1e2a4a}
+    :root{--bg:#0f1115;--card:#181b21;--ink:#eef0f3;--muted:#9aa1ad;--line:#2a2f38;--acc:#5b8cff;--acc-soft:#1e2a4a;--claude-soft:#3a2219}
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:16px 14px 120px;max-width:640px;margin:0 auto}
-  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px}
   h1{font-size:22px;font-weight:700}
-  .date{color:var(--muted);font-size:13px}
+  .datepick{margin-top:6px;display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+  .datepick input{font:inherit;font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
   .card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:600}
+  .claude-card{border-color:var(--claude);background:var(--claude-soft)}
+  .claude-card h2{color:var(--claude)}
+  .claude-card p{font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.4}
+  .steps{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
   .row:first-of-type{border-top:none}
   .lbl{font-size:15px;font-weight:500}
@@ -32,7 +38,7 @@
   .seg button.on[data-v="À voir"]{color:var(--warn)}
   .seg button.on[data-v="À faire"]{color:var(--todo)}
   .seg button.on[data-v="Fait"]{color:var(--ok)}
-  input[type=text],input[type=number],textarea{width:100%;font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+  input[type=text],input[type=number],input[type=url],textarea{width:100%;font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px}
   textarea{min-height:80px;resize:vertical}
   .sub{font-size:13px;color:var(--muted);margin:10px 0 6px}
   .sub:first-of-type{margin-top:0}
@@ -51,17 +57,37 @@
   .btn{border:none;border-radius:11px;font:inherit;font-weight:600;font-size:15px;padding:13px;cursor:pointer;text-align:center;text-decoration:none;display:block}
   .copy{background:var(--acc-soft);color:var(--acc)}
   .wa{background:var(--wa);color:#fff}
-  .ghost{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
-  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:20px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:10}
+  .cl{background:var(--claude);color:#fff}
+  .cl-2{background:var(--card);color:var(--claude);border:1px solid var(--claude)}
+  .ghost{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline;white-space:nowrap}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:20px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:10;max-width:90vw;text-align:center}
   .toast.show{opacity:1}
   details summary{cursor:pointer;color:var(--muted);font-size:13px}
+  .hidden{display:none}
+  .cfg label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
 </style>
 </head>
 <body>
 <header>
-  <div><h1>Rapport de shift</h1><div class="date" id="date"></div></div>
+  <div>
+    <h1>Rapport de shift</h1>
+    <label class="datepick">Soir du <input type="date" id="repDate"></label>
+  </div>
   <button class="ghost" id="reset">Nouveau rapport</button>
 </header>
+
+<div class="card claude-card">
+  <h2>Remplir avec Claude</h2>
+  <p>① Claude lit Asterio sur ton Mac (Chrome allumé, connecté à Asterio). ② Copie sa réponse, puis « Coller la réponse » : tout se remplit.</p>
+  <div class="steps">
+    <a class="btn cl" id="claudeBtn" href="#" target="_blank" rel="noopener">① Lancer Claude</a>
+    <button class="btn cl-2" id="pasteBtn">② Coller la réponse</button>
+  </div>
+  <div id="pasteBox" class="hidden" style="margin-top:10px">
+    <textarea id="pasteArea" placeholder="Colle ici le rapport donné par Claude"></textarea>
+    <button class="btn cl" id="importBtn" style="margin-top:8px;width:100%">Importer dans le rapport</button>
+  </div>
+</div>
 
 <div class="card">
   <h2>Tâches</h2>
@@ -76,14 +102,14 @@
 </div>
 
 <div class="card">
-  <h2>Nettoyage</h2>
+  <h2>Nettoyage (lendemain)</h2>
   <div class="sub">MÀB</div><div class="chips" data-group="mab"></div>
   <div class="sub">Arrivées</div><div class="chips" data-group="arr"></div>
   <div class="sub">Recouche</div><div class="chips" data-group="rec"></div>
 </div>
 
 <div class="card">
-  <h2>Petit-déjeuner</h2>
+  <h2>Petit-déjeuner (lendemain)</h2>
   <div class="two">
     <input type="number" id="pdjPax" min="0" placeholder="Pax" inputmode="numeric">
     <input type="text" id="pdjTables" placeholder="ex. 1 table de 1">
@@ -100,14 +126,12 @@
 <div class="card">
   <h2>Aperçu</h2>
   <pre id="preview"></pre>
-  <details style="margin-top:12px">
-    <summary>Importer un rapport fait par Claude</summary>
-    <textarea id="pasteArea" style="margin-top:8px" placeholder="Colle ici le rapport donné par Claude"></textarea>
-    <button class="btn copy" id="importBtn" style="margin-top:8px;width:100%">Importer</button>
-  </details>
-  <details style="margin-top:12px">
-    <summary>Réglages : numéros des chambres</summary>
-    <input type="text" id="roomsCfg" style="margin-top:8px" placeholder="1,2,3,4,5,6,7,8,9,10">
+  <details style="margin-top:12px" class="cfg">
+    <summary>Réglages</summary>
+    <label for="roomsCfg">Numéros des chambres</label>
+    <input type="text" id="roomsCfg" placeholder="1,2,3,4,5,6,7,8,9,10">
+    <label for="asterioCfg">Adresse Asterio (reste sur ce téléphone)</label>
+    <input type="url" id="asterioCfg" placeholder="https://…myasterio.com">
   </details>
 </div>
 
@@ -123,11 +147,13 @@ const STATES=["/","À voir","À faire","Fait"];
 const KEY="rapportShift_v1";
 const blank=()=>({tasks:Object.fromEntries(TASKS.map(t=>[t,"/"])),the:"",ast:[],mab:[],arr:[],rec:[],strip:[],pdjPax:"",pdjTables:"",notes:""});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
+let asterioUrl="";
+let repDate=todayISO();
 let s=blank();
-let extra={};
 
-function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){extra=d;if(d.rooms)rooms=d.rooms;if(d.s)s=Object.assign(blank(),d.s);}}catch(e){}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(Object.assign({},extra,{rooms,s})))}catch(e){}}
+function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=d.rooms;if(d.asterioUrl)asterioUrl=d.asterioUrl;if(d.s)s=Object.assign(blank(),d.s);}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({rooms,asterioUrl,s}))}catch(e){}}
 
 const $=id=>document.getElementById(id);
 const sortRooms=a=>[...a].sort((x,y)=>(parseFloat(x)||0)-(parseFloat(y)||0)||x.localeCompare(y));
@@ -148,7 +174,8 @@ function renderTasks(){
 function renderChips(){
   document.querySelectorAll(".chips").forEach(c=>{
     const g=c.dataset.group;c.innerHTML="";
-    sortRooms([...new Set([...rooms,...s[g]])]).forEach(n=>{const b=document.createElement("button");b.className="chip"+(s[g].includes(n)?" on":"");b.textContent=n;
+    const list=sortRooms([...new Set([...rooms,...s[g]])]);
+    list.forEach(n=>{const b=document.createElement("button");b.className="chip"+(s[g].includes(n)?" on":"");b.textContent=n;
       b.onclick=()=>{s[g]=s[g].includes(n)?s[g].filter(x=>x!==n):[...s[g],n];renderChips();update()};c.appendChild(b)});
   });
 }
@@ -186,7 +213,40 @@ function build(){
   return L.join("\n");
 }
 
-/* Import d'un rapport texte (ex. celui donné par Claude) */
+/* ---------- Claude ---------- */
+function fmtDate(iso,addDays){const [y,m,d]=iso.split("-").map(Number);const dt=new Date(y,m-1,d+(addDays||0));
+  return dt.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}
+function claudePrompt(){
+  const soir=fmtDate(repDate,0), lendemain=fmtDate(repDate,1);
+  return [
+`Fais mon rapport de shift du soir du ${soir}.`,
+`Utilise Claude in Chrome sur mon Mac : je suis connecté à Asterio${asterioUrl?" ("+asterioUrl+")":""}. Va dans le planning Hébergement.`,
+`- INFO ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre de personnes ("#2 : 2 pax").`,
+`- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
+`- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier) de chaque chambre occupée et compte les lignes "Petit-déjeuner" (les observations ne suffisent pas). Donne le total de pax et les tables.`,
+`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER.`,
+`Réponds avec le rapport exactement dans ce format, sans rien changer aux titres :`,
+`RAPPORT DE SHIFT:`,
+``,
+`INFO ASTREINTE : `,
+`#n : X pax`,
+``,
+`NETTOYAGE :`,
+`MÀB : …`,
+`Arrivées : …`,
+`Recouche : …`,
+``,
+`PDJ : X pax`,
+`(tables)`,
+``,
+`PRÉCISIONS`,
+`(points à vérifier, ou /)`,
+``,
+`Mets "/" quand il n'y a rien.`
+  ].join("\n");
+}
+function updateClaudeLink(){$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt())}
+
 function parseReport(txt){
   const ns=blank();let section="";let found=false;
   const after=l=>l.split(":").slice(1).join(":").trim();
@@ -195,14 +255,15 @@ function parseReport(txt){
   const notes=[];
   txt.replace(/\r/g,"").split("\n").forEach(raw=>{
     const l=raw.trim().replace(/^[*_`]+|[*_`]+$/g,"");const n=norm(l);
-    if(!l||n.startsWith("rapport de shift"))return;
+    if(!l)return;
+    if(n.startsWith("rapport de shift"))return;
     if(n.startsWith("info astreinte")){section="ast";found=true;return}
     if(n.startsWith("nettoyage")){section="net";found=true;return}
     if(n.startsWith("precisions")){section="prec";found=true;return}
     if(n.startsWith("bonne soiree")){section="end";return}
-    if(n.startsWith("pdj")){section="pdj";found=true;ns.pdjPax=String(parseInt(after(l))||"");return}
+    if(n.startsWith("pdj")){section="pdj";found=true;const v=after(l);ns.pdjPax=String(parseInt(v)||"");return}
     const ti=taskNorm.findIndex(t=>n.startsWith(t));
-    if(ti>-1){const v=norm(after(l));ns.tasks[TASKS[ti]]=STATES.find(x=>norm(x)===v)||"/";section="tasks";return}
+    if(ti>-1){const v=norm(after(l));const st=STATES.find(x=>norm(x)===v);ns.tasks[TASKS[ti]]=st||"/";section="tasks";return}
     if(n.startsWith("sachets de the")){ns.the=after(l);return}
     if(section==="ast"){const m=l.match(/#?\s*(\d+)\s*:\s*(\d+)/);if(m)ns.ast.push({room:m[1],pax:m[2]});return}
     if(section==="net"){
@@ -210,44 +271,61 @@ function parseReport(txt){
       else if(n.startsWith("arrivee"))ns.arr=nums(after(l));
       else if(n.startsWith("recouche"))ns.rec=nums(after(l));
       return}
-    if(section==="pdj"){if(!ns.pdjTables&&l!=="/")ns.pdjTables=l;return}
+    if(section==="pdj"){if(!ns.pdjTables&&l!=="/")ns.pdjTables=l.replace(/^[(]|[)]$/g,"");return}
     if(section==="prec"){
       if(n.includes("destripage")){ns.strip=nums(l.split(/manque/i).slice(1).join(" "));return}
-      if(l!=="/")notes.push(l.replace(/^[-•]\s*/,""));}
+      if(l!=="/")notes.push(l.replace(/^[-•]\s*/,""));return}
   });
   ns.notes=notes.join("\n");
   return found?ns:null;
 }
-function doImport(){
-  const txt=$("pasteArea").value;const ns=parseReport(txt);
-  if(!ns){toast("Format non reconnu");return}
-  TASKS.forEach(t=>{if(!txt.toLowerCase().includes(t.toLowerCase()))ns.tasks[t]=s.tasks[t]});
+function doImport(txt){
+  const ns=parseReport(txt||"");
+  if(!ns){toast("Format non reconnu — colle le rapport complet");return false}
+  // garde les tâches / thé déjà saisis si la réponse de Claude ne les contient pas
+  TASKS.forEach(t=>{if(!new RegExp(t.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&"),"i").test(txt))ns.tasks[t]=s.tasks[t]});
   if(!/sachets de th/i.test(txt))ns.the=s.the;
-  s=ns;$("pasteArea").value="";renderAll();toast("Rapport importé ✓");
+  s=ns;renderAll();toast("Rapport importé ✓");
+  $("pasteBox").classList.add("hidden");$("pasteArea").value="";
+  return true;
 }
 
 function update(){
   const t=build();$("preview").textContent=t;
-  $("wa").href="https://api.whatsapp.com/send?text="+encodeURIComponent(t);save();
+  $("wa").href="https://api.whatsapp.com/send?text="+encodeURIComponent(t);
+  updateClaudeLink();save();
 }
-function toast(m){const e=$("toast");e.textContent=m;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),1800)}
+function toast(m){const e=$("toast");e.textContent=m;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2200)}
 
 function bindInputs(){
   [["the","the"],["pdjPax","pdjPax"],["pdjTables","pdjTables"],["notes","notes"]].forEach(([id,k])=>{
     $(id).value=s[k];$(id).oninput=()=>{s[k]=$(id).value;update()}});
   $("roomsCfg").value=rooms.join(",");
+  $("asterioCfg").value=asterioUrl;
+  $("repDate").value=repDate;
 }
 function renderAll(){renderTasks();renderChips();renderAst();bindInputs();update()}
 
 $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1"});renderAst();update()};
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();save();toast("Chambres mises à jour")}};
-$("importBtn").onclick=doImport;
+$("asterioCfg").onchange=()=>{asterioUrl=$("asterioCfg").value.trim();update();toast("Adresse enregistrée")};
+$("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();updateClaudeLink()};
+$("claudeBtn").addEventListener("click",e=>{
+  if(!asterioUrl){e.preventDefault();document.querySelector(".cfg").open=true;$("asterioCfg").focus();toast("Ajoute d'abord l'adresse Asterio (Réglages)");return}
+  try{navigator.clipboard.writeText(claudePrompt()).then(()=>toast("Demande copiée — colle-la si Claude s'ouvre vide"),()=>{})}catch(e){}
+});
+$("pasteBtn").onclick=async()=>{
+  let txt="";
+  try{txt=await navigator.clipboard.readText()}catch(e){}
+  if(txt&&doImport(txt))return;
+  $("pasteBox").classList.remove("hidden");$("pasteArea").focus();
+};
+$("importBtn").onclick=()=>doImport($("pasteArea").value);
 $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(build());toast("Copié ✓")}catch(e){
   const r=document.createRange();r.selectNodeContents($("preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
 $("reset").onclick=()=>{if($("reset").dataset.c){s=blank();delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();toast("Rapport vidé")}
   else{$("reset").dataset.c="1";$("reset").textContent="Confirmer ?";setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport"},3000)}};
 
-$("date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
 load();renderAll();
 </script>
 </body>
