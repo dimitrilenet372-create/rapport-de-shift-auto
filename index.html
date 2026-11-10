@@ -241,11 +241,11 @@ function claudePrompt(){
 `- PDJ du ${lendemain} matin : compte les lignes "Petit-déjeuner" dans les dossiers (folio). S'il manque le dossier d'une chambre occupée, dis-le dans PRÉCISIONS. Donne le total de pax et les tables.`,
 `Si une capture est illisible ou s'il manque une info, signale-le dans PRÉCISIONS au lieu de deviner.`
 ]:[
-`Utilise Claude in Chrome sur mon Mac. Regarde d'abord les onglets de ton groupe : si un onglet Asterio est déjà ouvert et connecté, réutilise-le et n'ouvre surtout pas de nouvel onglet. Sinon ouvre un seul onglet Asterio${asterioUrl?" ("+asterioUrl+")":""} ; si la page de connexion s'affiche, arrête-toi et dis-moi de me connecter dans cet onglet. Va dans le planning Hébergement.`,
+`Utilise Claude in Chrome sur mon Mac. Regarde d'abord les onglets de ton groupe : si un onglet Asterio${asterioUrl?" ("+asterioUrl+")":""} connecté y est, utilise-le. Sinon, n'ouvre PAS de nouvel onglet Asterio : crée ton groupe avec un onglet vide, demande-moi d'y glisser mon onglet Asterio déjà connecté, et attends que je te dise "fait". Ensuite va dans le planning Hébergement par le menu d'Asterio, sans jamais taper de code PIN.`,
 `- INFO ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre de personnes ("#2 : 2 pax").`,
 `- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
 `- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier) de chaque chambre occupée et compte les lignes "Petit-déjeuner" (les observations ne suffisent pas). Donne le total de pax et les tables.`,
-`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER. À la fin, laisse l'onglet Asterio ouvert pour la prochaine fois.`
+`Règles : ne modifie rien dans Asterio. Ferme une fiche en cliquant à côté (le ✕ ouvre "Annuler le dossier"). Pour sortir d'un dossier, clique QUITTER. À la fin, laisse l'onglet Asterio ouvert dans ton groupe pour la prochaine fois.`
 ]),
 `Réponds avec le rapport exactement dans ce format, sans rien changer aux titres :`,
 `RAPPORT DE SHIFT:`,
@@ -279,7 +279,7 @@ function updateClaudeLink(){
   $("pasteBtn").textContent=phone?"③ Coller la réponse":"② Coller la réponse";
   $("claudeHelp").innerHTML=phone
     ?"① Dans Asterio sur ton téléphone, fais une capture du <b>planning</b> (soir + lendemain) et du <b>dossier</b> de chaque chambre occupée (pour le PDJ). ② Colle la demande dans Claude et <b>joins les captures</b>. ③ Copie sa réponse, puis « Coller la réponse »."
-    :"① Colle la demande <b>toujours dans la même conversation Claude</b> (épingle-la) : Claude lit Asterio sur le Mac, dans l'onglet déjà connecté. ② Copie sa réponse, puis « Coller la réponse ».";
+    :"① Colle la demande dans ta conversation Claude : il lit Asterio sur le Mac. S'il te le demande, glisse ton onglet Asterio connecté dans son groupe d'onglets coloré. ② Copie sa réponse, puis « Coller la réponse ».";
 }
 
 function parseReport(txt){
