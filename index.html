@@ -88,7 +88,7 @@
   <p id="claudeHelp"></p>
   <a class="btn cl-2 hidden" id="asterioBtn" href="#" target="_blank" rel="noopener" style="margin-bottom:8px">① Ouvrir Asterio et faire les captures</a>
   <div class="steps">
-    <a class="btn cl" id="claudeBtn" href="https://claude.ai/" target="_blank" rel="noopener">Copier et ouvrir Claude</a>
+    <a class="btn cl" id="claudeBtn" href="claude://code">Copier et ouvrir Claude</a>
     <button class="btn cl-2" id="pasteBtn">Coller la réponse</button>
   </div>
   <div id="pasteBox" class="hidden" style="margin-top:10px">
@@ -140,6 +140,8 @@
     <input type="text" id="roomsCfg" placeholder="1,2,3,4,5,6,7,8,9,10">
     <label for="asterioCfg">Adresse Asterio (reste sur ce téléphone)</label>
     <input type="url" id="asterioCfg" placeholder="https://…myasterio.com">
+    <label for="sessCfg">Conversation Claude du mode Mac (lien ou identifiant session_…)</label>
+    <input type="text" id="sessCfg" placeholder="session_…">
   </details>
 </div>
 
@@ -157,12 +159,14 @@ const blank=()=>({tasks:Object.fromEntries(TASKS.map(t=>[t,"/"])),the:"",ast:[],
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let asterioUrl="";
 let mode="mac";
+const DEFAULT_SESSION="session_01RdosE1VSxVVipQwiPoNu9U";
+let sessionId=DEFAULT_SESSION;
 let repDate=todayISO();
 let s=blank();
 
 function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
-function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=d.rooms;if(d.asterioUrl)asterioUrl=d.asterioUrl;if(d.mode)mode=d.mode;if(d.s)s=Object.assign(blank(),d.s);}}catch(e){}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({rooms,asterioUrl,mode,s}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=d.rooms;if(d.asterioUrl)asterioUrl=d.asterioUrl;if(d.mode)mode=d.mode;if(d.sessionId)sessionId=d.sessionId;if(d.s)s=Object.assign(blank(),d.s);}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({rooms,asterioUrl,mode,sessionId,s}))}catch(e){}}
 
 const $=id=>document.getElementById(id);
 const sortRooms=a=>[...a].sort((x,y)=>(parseFloat(x)||0)-(parseFloat(y)||0)||x.localeCompare(y));
@@ -268,6 +272,9 @@ function updateClaudeLink(){
   document.querySelectorAll("#modeSeg button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));
   $("asterioBtn").classList.toggle("hidden",!phone);
   $("asterioBtn").href=asterioUrl||"#";
+  $("claudeBtn").href=phone
+    ?"claude://code/new?q="+encodeURIComponent(claudePrompt())
+    :(sessionId?"claude://code/"+encodeURIComponent(sessionId):"claude://code");
   $("claudeBtn").textContent=phone?"② Copier et ouvrir Claude":"① Copier et ouvrir Claude";
   $("pasteBtn").textContent=phone?"③ Coller la réponse":"② Coller la réponse";
   $("claudeHelp").innerHTML=phone
@@ -330,6 +337,7 @@ function bindInputs(){
     $(id).value=s[k];$(id).oninput=()=>{s[k]=$(id).value;update()}});
   $("roomsCfg").value=rooms.join(",");
   $("asterioCfg").value=asterioUrl;
+  $("sessCfg").value=sessionId;
   $("repDate").value=repDate;
 }
 function renderAll(){renderTasks();renderChips();renderAst();bindInputs();update()}
@@ -339,6 +347,7 @@ $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>
 $("asterioCfg").onchange=()=>{asterioUrl=$("asterioCfg").value.trim();update();toast("Adresse enregistrée")};
 $("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();updateClaudeLink()};
 document.querySelectorAll("#modeSeg button").forEach(b=>b.onclick=()=>{mode=b.dataset.m;update()});
+$("sessCfg").onchange=()=>{const v=$("sessCfg").value.trim();const m=v.match(/session_[A-Za-z0-9]+/);sessionId=m?m[0]:v;$("sessCfg").value=sessionId;update();toast(sessionId?"Conversation enregistrée":"Ouvrira la liste des conversations")};
 $("asterioBtn").addEventListener("click",e=>{if(!asterioUrl){e.preventDefault();toast("Ajoute l'adresse Asterio dans Réglages")}});
 $("claudeBtn").addEventListener("click",()=>{
   try{navigator.clipboard.writeText(claudePrompt()).then(()=>toast("Demande copiée — colle-la dans ta conversation Claude"),()=>{})}catch(e){}
