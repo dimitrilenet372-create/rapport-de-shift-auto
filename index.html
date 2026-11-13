@@ -59,6 +59,11 @@
   .wa{background:var(--wa);color:#fff}
   .cl{background:var(--cl);color:#fff}
   .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+  .orow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+  .orow:first-child{border-top:none}
+  .orow .lbl{flex:1;font-size:14px}
+  .orow input{width:70px;text-align:center}
+  .auto{border:none;background:none;color:var(--acc);font:inherit;font-size:12px;cursor:pointer;min-width:34px}
   .ghost{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:20px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:10;max-width:90vw;text-align:center}
   .toast.show{opacity:1}
@@ -114,6 +119,18 @@
 </div>
 
 <div class="card">
+  <h2>🥐 Commande boulangerie (PDJ du lendemain)</h2>
+  <div id="orderList"></div>
+  <div class="row" style="margin-top:8px"><span class="lbl">Heure de livraison</span><input type="text" id="orderTime" style="max-width:110px" placeholder="7h30"></div>
+  <pre id="orderPreview" style="margin-top:10px"></pre>
+  <div class="two" style="grid-template-columns:1fr 1fr;margin-top:10px">
+    <button class="btn copy" id="orderCopy">Copier</button>
+    <a class="btn wa" id="orderWa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+  </div>
+  <p class="note">Calcul automatique avec les pax du PDJ. Tu peux changer un chiffre à la main ; « auto » remet le calcul.</p>
+</div>
+
+<div class="card">
   <h2>Précisions</h2>
   <div class="sub">Destripage — chambres manquantes</div><div class="chips" data-group="strip"></div>
   <div class="sub">Texte des précisions (envoyé tel quel, gardé au nouveau rapport)</div>
@@ -151,7 +168,7 @@ const STATES=["/","A voir","A faire","Fait"];
 const KEY="rapportShift_v1";
 const blankTasks=()=>Object.fromEntries(TASKS.map(t=>[t,"/"]));
 const blankNotes=()=>Object.fromEntries(TASKS.map(t=>[t,""]));
-const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:""});
+const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30"});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let s=blank();
 let updated=0;
@@ -179,7 +196,9 @@ function clean(x){
     ast:arr(x.ast).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??""),note:String(a.note||"")})),
     netNote:x.netNote||"",mab:arr(x.mab).map(String),mabNote:x.mabNote||"",arr:arr(x.arr).map(String),arrNote:x.arrNote||"",
     rec:arr(x.rec).map(String),recNote:x.recNote||"",pdjPax:String(x.pdjPax??""),pdjTables:x.pdjTables||"",
-    strip:arr(x.strip).map(String),notes:isOld(x)?joinNotes(oldBul(x.notes),x.perm,oldBul(x.notes2)):String(x.notes||"")};
+    strip:arr(x.strip).map(String),notes:isOld(x)?joinNotes(oldBul(x.notes),x.perm,oldBul(x.notes2)):String(x.notes||""),
+    orderOv:Object.fromEntries(Object.entries(x.orderOv||{}).filter(([k,v])=>PRODUCTS.some(p=>p.k===k)&&v!==""&&v!==null).map(([k,v])=>[k,String(v)])),
+    orderTime:x.orderTime||"7h30"};
 }
 const DEFAULT_NOTES=`- La #3 partira à 14h00 maximum
 
@@ -247,12 +266,55 @@ function renderAst(){
 }
 const FIELDS=["netNote","mabNote","arrNote","recNote","pdjPax","pdjTables","notes"];
 function bindInputs(){
-  FIELDS.forEach(k=>{if(document.activeElement!==$(k))$(k).value=s[k];$(k).oninput=()=>{s[k]=$(k).value;commit()}});
+  FIELDS.forEach(k=>{if(document.activeElement!==$(k))$(k).value=s[k];$(k).oninput=()=>{s[k]=$(k).value;if(k==="pdjPax"){s.orderOv={};renderOrder()}commit()}});
+  $("orderTime").oninput=()=>{s.orderTime=$("orderTime").value;commit()};
   $("roomsCfg").value=rooms.join(",");
 }
-function renderAll(){renderTasks();renderChips();renderAst();bindInputs();refresh()}
+function renderAll(){renderTasks();renderChips();renderAst();bindInputs();renderOrder();refresh()}
 function toast(m){const e=$("toast");e.textContent=m;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2200)}
 function setSync(t){$("sync").textContent=t}
+
+/* ---------- commande boulangerie ---------- */
+const pl=(n,one,many)=>n>1?many:one;
+const PRODUCTS=[
+  {k:"croissants",name:"Minis croissants",rule:"pax × 1,5",calc:p=>Math.ceil(p*1.5),text:n=>`${n} ${pl(n,"mini croissant","minis croissants")}`},
+  {k:"pac",name:"Minis pains au chocolat",rule:"pax × 1,5",calc:p=>Math.ceil(p*1.5),text:n=>`${n} ${pl(n,"mini pain au chocolat","minis pains aux chocolat")}`},
+  {k:"madeleines",name:"Madeleines",rule:"= pax",calc:p=>p,text:n=>`${n} ${pl(n,"madeleine","madeleines")}`},
+  {k:"baguettes",name:"Baguettes",rule:"1 sous 5 pax, sinon 2",calc:p=>p<5?1:2,text:n=>`${n} ${pl(n,"baguette","baguettes")}`},
+  {k:"champs",name:"Pain des champs tranché",rule:"1",calc:p=>1,text:n=>`${n} ${pl(n,"pain des champs tranché","pains des champs tranchés")}`},
+  {k:"nordique",name:"Pain nordique tranché",rule:"1 sous 5 pax, sinon 2",calc:p=>p<5?1:2,text:n=>`${n} ${pl(n,"pain nordique tranché","pains nordiques tranchés")}`}
+];
+const pdjPaxNum=()=>parseInt(s.pdjPax)||0;
+function orderQty(p){const ov=s.orderOv[p.k];return ov!==undefined&&ov!==""?Math.max(0,parseInt(ov)||0):p.calc(pdjPaxNum())}
+function buildOrder(){
+  const pax=pdjPaxNum();if(!pax)return"";
+  const [y,m,d]=repDate.split("-").map(Number);
+  const jour=new Date(y,m-1,d+1).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  const L=[`Bonjour, pour demain ${jour} à ${(s.orderTime||"7h30").trim()} :`];
+  PRODUCTS.forEach(p=>{const n=orderQty(p);if(n>0)L.push(`- ${p.text(n)}`)});
+  L.push("","Merci, bonne soirée.");
+  return L.join("\n");
+}
+function renderOrder(){
+  const box=$("orderList");box.innerHTML="";
+  const pax=pdjPaxNum();
+  PRODUCTS.forEach(p=>{
+    const r=document.createElement("div");r.className="orow";
+    const l=document.createElement("span");l.className="lbl";l.textContent=`${p.name}`;
+    const hint=document.createElement("span");hint.className="note";hint.style.margin="0";hint.textContent=p.rule;l.appendChild(document.createElement("br"));l.appendChild(hint);
+    const i=document.createElement("input");i.type="number";i.min="0";i.inputMode="numeric";i.value=pax?orderQty(p):"";
+    i.oninput=()=>{s.orderOv[p.k]=i.value;commit()};
+    const a=document.createElement("button");a.className="auto";a.textContent=s.orderOv[p.k]!==undefined?"auto":"";
+    a.onclick=()=>{delete s.orderOv[p.k];renderOrder();commit()};
+    r.append(l,i,a);box.appendChild(r);
+  });
+  if(document.activeElement!==$("orderTime"))$("orderTime").value=s.orderTime||"7h30";
+}
+function refreshOrder(){
+  const t=buildOrder();
+  $("orderPreview").textContent=t||"Pas de PDJ demain → pas de commande.";
+  $("orderWa").href=t?"https://api.whatsapp.com/send?text="+encodeURIComponent(t):"#";
+}
 
 /* ---------- texte du rapport ---------- */
 const paren=n=>n&&n.trim()?` (${n.trim()})`:"";
@@ -280,6 +342,7 @@ function build(){
 function refresh(){
   const t=build();$("preview").textContent=t;
   $("wa").href="https://api.whatsapp.com/send?text="+encodeURIComponent(t);
+  refreshOrder();
 }
 
 /* ---------- sauvegarde + synchro Firebase ---------- */
@@ -337,7 +400,7 @@ function urlPatch(){
 }
 function applyPatch(base,p){
   const ns=clean(base);
-  ns.ast=p.ast;ns.mab=p.mab;ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;
+  ns.ast=p.ast;ns.mab=p.mab;ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};
   return ns;
 }
 
@@ -405,12 +468,15 @@ $("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();setClaudeLink(
 $("claudeBtn").addEventListener("click",()=>{try{navigator.clipboard.writeText(claudePrompt()).catch(()=>{})}catch(e){}});
 $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1",note:""});renderAst();commit()};
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();commit();toast("Chambres mises à jour")}};
+$("orderCopy").onclick=async()=>{const t=buildOrder();if(!t){toast("Pas de PDJ : rien à commander");return}
+  try{await navigator.clipboard.writeText(t);toast("Commande copiée ✓")}catch(e){const r=document.createRange();r.selectNodeContents($("orderPreview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
+$("orderWa").addEventListener("click",e=>{if(!buildOrder()){e.preventDefault();toast("Pas de PDJ : rien à commander")}});
 $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
   if(!ns){toast("Format non reconnu");return}
   s=ns;$("pasteArea").value="";renderAll();commit();toast("Rapport importé ✓")};
 $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(build());toast("Copié ✓")}catch(e){
   const r=document.createRange();r.selectNodeContents($("preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
-$("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes;s=blank();s.notes=keep;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();commit();toast("Rapport vidé (précisions gardées)")}
+$("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes,kt=s.orderTime;s=blank();s.notes=keep;s.orderTime=kt;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();commit();toast("Rapport vidé (précisions gardées)")}
   else{$("reset").dataset.c="1";$("reset").textContent="Confirmer ?";setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport"},3000)}};
 
 $("date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
@@ -428,7 +494,7 @@ if(patch){
 }else{renderAll();startSync()}
 
 /* pour les tests */
-window.__rapport={parseReport,build,claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
+window.__rapport={parseReport,build,buildOrder,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
