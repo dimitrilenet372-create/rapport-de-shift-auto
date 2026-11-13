@@ -278,10 +278,10 @@ function setSync(t){$("sync").textContent=t}
 const pl=(n,one,many)=>n>1?many:one;
 const PRODUCTS=[
   {k:"croissants",name:"Minis croissants",rule:"pax × 1,5",calc:p=>Math.ceil(p*1.5),text:n=>`${n} ${pl(n,"mini croissant","minis croissants")}`},
-  {k:"pac",name:"Minis pains au chocolat",rule:"pax × 1,5",calc:p=>Math.ceil(p*1.5),text:n=>`${n} ${pl(n,"mini pain au chocolat","minis pains aux chocolat")}`},
+  {k:"pac",name:"Minis pains au chocolat",rule:"= pax",calc:p=>p,text:n=>`${n} ${pl(n,"mini pain au chocolat","minis pains aux chocolat")}`},
   {k:"madeleines",name:"Madeleines",rule:"= pax",calc:p=>p,text:n=>`${n} ${pl(n,"madeleine","madeleines")}`},
   {k:"baguettes",name:"Baguettes",rule:"1 sous 5 pax, sinon 2",calc:p=>p<5?1:2,text:n=>`${n} ${pl(n,"baguette","baguettes")}`},
-  {k:"champs",name:"Pain des champs tranché",rule:"1",calc:p=>1,text:n=>`${n} ${pl(n,"pain des champs tranché","pains des champs tranchés")}`},
+  {k:"champs",name:"Pain des champs tranché",rule:"1 sous 5 pax, sinon 2",calc:p=>p<5?1:2,text:n=>`${n} ${pl(n,"pain des champs tranché","pains des champs tranchés")}`},
   {k:"nordique",name:"Pain nordique tranché",rule:"1 sous 5 pax, sinon 2",calc:p=>p<5?1:2,text:n=>`${n} ${pl(n,"pain nordique tranché","pains nordiques tranchés")}`}
 ];
 const pdjPaxNum=()=>parseInt(s.pdjPax)||0;
