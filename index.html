@@ -24,28 +24,32 @@
   .sync{font-size:12px;color:var(--muted);margin-top:2px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
   .card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:600}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
-  .row:first-of-type{border-top:none}
+  .task{padding:8px 0;border-top:1px solid var(--line)}
+  .task:first-of-type{border-top:none;padding-top:0}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .lbl{font-size:15px;font-weight:500}
   .seg{display:flex;background:var(--bg);border-radius:9px;padding:3px;gap:2px;flex-shrink:0}
   .seg button{border:none;background:none;color:var(--muted);font-size:13px;padding:6px 9px;border-radius:7px;cursor:pointer;font-weight:500}
   .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-  .seg button.on[data-v="À voir"]{color:var(--warn)}
-  .seg button.on[data-v="À faire"]{color:var(--todo)}
+  .seg button.on[data-v="A voir"]{color:var(--warn)}
+  .seg button.on[data-v="A faire"]{color:var(--todo)}
   .seg button.on[data-v="Fait"]{color:var(--ok)}
   input[type=text],input[type=number],input[type=date],textarea{width:100%;font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+  input.small{font-size:13px;padding:6px 9px;margin-top:6px;background:transparent}
   textarea{min-height:80px;resize:vertical}
-  .sub{font-size:13px;color:var(--muted);margin:10px 0 6px}
+  textarea.big{min-height:200px;font-size:13px}
+  .sub{font-size:13px;color:var(--muted);margin:12px 0 6px}
   .sub:first-of-type{margin-top:0}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;font-weight:600;min-width:42px;height:38px;border-radius:9px;cursor:pointer}
   .chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
-  .ast{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .ast{margin-bottom:10px}
+  .ast .line{display:flex;gap:8px;align-items:center}
   .ast select{flex:1;font:inherit;font-size:15px;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
-  .ast input{width:90px}
+  .ast input[type=number]{width:80px}
   .x{border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 6px}
   .add{border:1px dashed var(--line);background:none;color:var(--acc);font:inherit;font-size:14px;font-weight:600;padding:9px;border-radius:9px;width:100%;cursor:pointer}
-  .two{display:grid;grid-template-columns:90px 1fr;gap:8px}
+  .two{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:start}
   .clrow{display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center}
   pre{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;background:var(--bg);border-radius:9px;padding:12px}
   .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);display:flex;gap:8px;justify-content:center}
@@ -76,13 +80,12 @@
     <a class="btn cl" id="claudeBtn" href="https://claude.ai/new" target="_blank" rel="noopener">🤖 Faire le rapport avec Claude</a>
     <input type="date" id="repDate" aria-label="Soir du rapport">
   </div>
-  <p class="note">Claude s'ouvre avec la demande déjà écrite : appuie sur Envoyer. Il lit Asterio sur le Mac et <b>le rapport arrive tout seul ici</b>. Il ne te reste qu'à compléter les tâches.</p>
+  <p class="note">Claude s'ouvre avec la demande déjà écrite : appuie sur Envoyer. Il lit Asterio sur le Mac et <b>le rapport arrive tout seul ici</b>. Il ne te reste qu'à compléter le reste.</p>
 </div>
 
 <div class="card">
   <h2>Tâches</h2>
   <div id="tasks"></div>
-  <div class="row"><span class="lbl">Sachets de thé</span><input type="text" id="the" placeholder="ex. 12 restants" style="max-width:170px"></div>
 </div>
 
 <div class="card">
@@ -93,24 +96,32 @@
 
 <div class="card">
   <h2>Nettoyage</h2>
+  <input type="text" id="netNote" placeholder="Info ménage (ex. Lydie vient vers 12h30)">
   <div class="sub">MÀB</div><div class="chips" data-group="mab"></div>
+  <input type="text" class="small" id="mabNote" placeholder="précision (ex. laisser le canapé lit dans la 4)">
   <div class="sub">Arrivées</div><div class="chips" data-group="arr"></div>
+  <input type="text" class="small" id="arrNote" placeholder="précision (optionnel)">
   <div class="sub">Recouche</div><div class="chips" data-group="rec"></div>
+  <input type="text" class="small" id="recNote" placeholder="précision (optionnel)">
 </div>
 
 <div class="card">
   <h2>Petit-déjeuner</h2>
   <div class="two">
     <input type="number" id="pdjPax" min="0" placeholder="Pax" inputmode="numeric">
-    <input type="text" id="pdjTables" placeholder="ex. 1 table de 1">
+    <textarea id="pdjTables" placeholder="Une ligne par table, ex. :&#10;4 tables de 2 (dont la #3 en chambre vers 9h30)&#10;1 table de 4 (la #8 avec 2 pax extérieur) vers 9h00"></textarea>
   </div>
 </div>
 
 <div class="card">
   <h2>Précisions</h2>
   <div class="sub">Destripage — chambres manquantes</div><div class="chips" data-group="strip"></div>
-  <div class="sub">Autres infos (une par ligne)</div>
-  <textarea id="notes" placeholder="20€ en liquide caisse bar = chèque cadeau"></textarea>
+  <div class="sub">Précisions du jour (une par ligne, effacées au nouveau rapport)</div>
+  <textarea id="notes" placeholder="La #3 partira à 14h00 maximum&#10;Demain concert d'Armand"></textarea>
+  <div class="sub">Messages permanents (gardés d'un rapport à l'autre, envoyés tels quels)</div>
+  <textarea id="perm" class="big" placeholder="* Double authentification…&#10;&#10;Point sur les chauffages…"></textarea>
+  <div class="sub">Infos du jour à la fin (après les messages permanents, effacées au nouveau rapport)</div>
+  <textarea id="notes2" placeholder="Demain concert d'Armand (que 4 pax pour le moment 🫠)"></textarea>
 </div>
 
 <div class="card">
@@ -118,7 +129,7 @@
   <pre id="preview"></pre>
   <details style="margin-top:12px">
     <summary>Importer un rapport texte (secours)</summary>
-    <textarea id="pasteArea" style="margin-top:8px" placeholder="Colle ici le rapport donné par Claude"></textarea>
+    <textarea id="pasteArea" style="margin-top:8px" placeholder="Colle ici un rapport complet"></textarea>
     <button class="btn copy" id="importBtn" style="margin-top:8px;width:100%">Importer</button>
   </details>
   <details style="margin-top:12px">
@@ -139,39 +150,56 @@ import { getDatabase, onValue, ref, set } from "https://www.gstatic.com/firebase
 
 const APP_URL="https://dimitrilenet372-create.github.io/rapport-de-shift-auto/";
 const ASTERIO="https://lesquissebarbizon-77630.myasterio.com/";
-const TASKS=["PLBS & débit","Boîte mail/Booking","Jeter cartons","Jeter le verre","Jeter compost"];
-const STATES=["/","À voir","À faire","Fait"];
+const TASKS=["PLBS & débit","Boîte mail/Booking","Jeter cartons","Jeter le verre","Jeter compost","Sachets de thé"];
+const STATES=["/","A voir","A faire","Fait"];
 const KEY="rapportShift_v1";
-const blank=()=>({tasks:Object.fromEntries(TASKS.map(t=>[t,"/"])),the:"",ast:[],mab:[],arr:[],rec:[],strip:[],pdjPax:"",pdjTables:"",notes:""});
+const blankTasks=()=>Object.fromEntries(TASKS.map(t=>[t,"/"]));
+const blankNotes=()=>Object.fromEntries(TASKS.map(t=>[t,""]));
+const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",notes2:""});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let s=blank();
+let perm="";
 let updated=0;
 let repDate=todayISO();
 
 const $=id=>document.getElementById(id);
 const sortRooms=a=>[...a].sort((x,y)=>(parseFloat(x)||0)-(parseFloat(y)||0)||String(x).localeCompare(String(y)));
-const norm=t=>String(t).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
+const norm=t=>String(t??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
 const arr=v=>Array.isArray(v)?v:(v&&typeof v==="object"?Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]):[]);
+const state=v=>STATES.find(x=>norm(x)===norm(v))||"/";
 function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
-function clean(x){const b=blank();x=x||{};return{
-  tasks:Array.isArray(x.tasks)?Object.fromEntries(TASKS.map((t,i)=>[t,STATES.includes(x.tasks[i])?x.tasks[i]:"/"])):Object.assign(b.tasks,x.tasks||{}),the:x.the||"",ast:arr(x.ast).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??"")})),
-  mab:arr(x.mab).map(String),arr:arr(x.arr).map(String),rec:arr(x.rec).map(String),strip:arr(x.strip).map(String),
-  pdjPax:String(x.pdjPax??""),pdjTables:x.pdjTables||"",notes:x.notes||""}}
 
-function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=arr(d.rooms).map(String);if(d.s)s=clean(d.s);updated=d.updated||0}}catch(e){}}
-function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({rooms,s,updated}))}catch(e){}}
+/* Remet n'importe quelle donnée (ancienne version, Firebase…) dans le bon format */
+function clean(x){
+  x=x||{};const b=blank();
+  const byName=(v,def)=>Array.isArray(v)?Object.fromEntries(TASKS.map((t,i)=>[t,v[i]??def[t]])):Object.assign({},def,v||{});
+  const tasks=byName(x.tasks,b.tasks);Object.keys(tasks).forEach(k=>tasks[k]=state(tasks[k]));
+  const taskNotes=byName(x.taskNotes,b.taskNotes);Object.keys(taskNotes).forEach(k=>taskNotes[k]=String(taskNotes[k]||""));
+  if(x.the&&!taskNotes["Sachets de thé"])taskNotes["Sachets de thé"]=String(x.the);   /* ancienne version */
+  return{tasks,taskNotes,
+    ast:arr(x.ast).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??""),note:String(a.note||"")})),
+    netNote:x.netNote||"",mab:arr(x.mab).map(String),mabNote:x.mabNote||"",arr:arr(x.arr).map(String),arrNote:x.arrNote||"",
+    rec:arr(x.rec).map(String),recNote:x.recNote||"",pdjPax:String(x.pdjPax??""),pdjTables:x.pdjTables||"",
+    strip:arr(x.strip).map(String),notes:x.notes||"",notes2:x.notes2||""};
+}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=arr(d.rooms).map(String);if(d.s)s=clean(d.s);perm=d.perm||"";updated=d.updated||0}}catch(e){}}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({rooms,s,perm,updated}))}catch(e){}}
 
 /* ---------- rendu ---------- */
 function renderTasks(){
   $("tasks").innerHTML="";
   TASKS.forEach(t=>{
+    const w=document.createElement("div");w.className="task";
     const r=document.createElement("div");r.className="row";
     const l=document.createElement("span");l.className="lbl";l.textContent=t;r.appendChild(l);
     const seg=document.createElement("div");seg.className="seg";
     STATES.forEach(v=>{const b=document.createElement("button");b.textContent=v;b.dataset.v=v;
       if(s.tasks[t]===v)b.className="on";
       b.onclick=()=>{s.tasks[t]=v;renderTasks();commit()};seg.appendChild(b)});
-    r.appendChild(seg);$("tasks").appendChild(r);
+    r.appendChild(seg);w.appendChild(r);
+    const n=document.createElement("input");n.type="text";n.className="small";n.placeholder="précision (optionnel)";n.value=s.taskNotes[t]||"";
+    n.oninput=()=>{s.taskNotes[t]=n.value;commit()};w.appendChild(n);
+    $("tasks").appendChild(w);
   });
 }
 function renderChips(){
@@ -184,63 +212,75 @@ function renderChips(){
 function renderAst(){
   $("astList").innerHTML="";
   s.ast.forEach((a,i)=>{
-    const r=document.createElement("div");r.className="ast";
+    const w=document.createElement("div");w.className="ast";
+    const r=document.createElement("div");r.className="line";
     const sel=document.createElement("select");
     sortRooms([...new Set([...rooms,a.room].filter(Boolean))]).forEach(n=>{const o=document.createElement("option");o.textContent=n;if(n===a.room)o.selected=true;sel.appendChild(o)});
     sel.onchange=()=>{a.room=sel.value;commit()};
     const p=document.createElement("input");p.type="number";p.min="0";p.inputMode="numeric";p.value=a.pax;p.placeholder="pax";
     p.oninput=()=>{a.pax=p.value;commit()};
     const x=document.createElement("button");x.className="x";x.textContent="×";x.onclick=()=>{s.ast.splice(i,1);renderAst();commit()};
-    r.append("#",sel,p,"pax",x);$("astList").appendChild(r);
+    r.append("#",sel,p,"pax",x);w.appendChild(r);
+    const n=document.createElement("input");n.type="text";n.className="small";n.placeholder="précision (ex. dont un enfant de 3 ans)";n.value=a.note||"";
+    n.oninput=()=>{a.note=n.value;commit()};w.appendChild(n);
+    $("astList").appendChild(w);
   });
 }
-const list=a=>a.length?sortRooms(a).join(", "):"/";
-function build(){
-  const L=["RAPPORT DE SHIFT:",""];
-  TASKS.forEach(t=>L.push(`${t} : ${s.tasks[t]}`));
-  L.push(`Sachets de thé : ${s.the.trim()}`,"","INFO ASTREINTE : ");
-  const ast=s.ast.filter(a=>a.room);
-  if(ast.length)ast.forEach(a=>L.push(`#${a.room} : ${a.pax||0} pax`));else L.push("/");
-  L.push("","","NETTOYAGE :",`MÀB : ${list(s.mab)}`,`Arrivées : ${list(s.arr)}`,`Recouche : ${list(s.rec)}`,"");
-  const pax=parseInt(s.pdjPax)||0;
-  L.push(`PDJ : ${pax?pax+" pax":"/"}`);
-  if(pax&&s.pdjTables.trim())L.push(s.pdjTables.trim());
-  L.push("","PRÉCISIONS","");
-  let any=false;
-  if(s.strip.length){L.push(`Destripage des chambres, il manque ${sortRooms(s.strip).join(", ")}`,"");any=true}
-  s.notes.split("\n").map(x=>x.trim()).filter(Boolean).forEach(n=>{L.push("- "+n.replace(/^-\s*/,""));any=true});
-  if(!any)L.push("/");
-  L.push("","Bonne soirée à tous 😊");
-  return L.join("\n");
-}
-function refresh(){
-  const t=build();$("preview").textContent=t;
-  $("wa").href="https://api.whatsapp.com/send?text="+encodeURIComponent(t);
-}
+const FIELDS=["netNote","mabNote","arrNote","recNote","pdjPax","pdjTables","notes","notes2"];
 function bindInputs(){
-  [["the","the"],["pdjPax","pdjPax"],["pdjTables","pdjTables"],["notes","notes"]].forEach(([id,k])=>{
-    if(document.activeElement!==$(id))$(id).value=s[k];$(id).oninput=()=>{s[k]=$(id).value;commit()}});
+  FIELDS.forEach(k=>{if(document.activeElement!==$(k))$(k).value=s[k];$(k).oninput=()=>{s[k]=$(k).value;commit()}});
+  if(document.activeElement!==$("perm"))$("perm").value=perm;
+  $("perm").oninput=()=>{perm=$("perm").value;commit()};
   $("roomsCfg").value=rooms.join(",");
 }
 function renderAll(){renderTasks();renderChips();renderAst();bindInputs();refresh()}
 function toast(m){const e=$("toast");e.textContent=m;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2200)}
 function setSync(t){$("sync").textContent=t}
 
+/* ---------- texte du rapport ---------- */
+const paren=n=>n&&n.trim()?` (${n.trim()})`:"";
+function roomsFr(a){const l=sortRooms(a);if(!l.length)return"/";if(l.length===1)return l[0];return l.slice(0,-1).join(", ")+" et "+l[l.length-1]}
+const bullet=l=>/^[-*•#]/.test(l)?l:"- "+l;
+function build(){
+  const L=["RAPPORT DE SHIFT:",""];
+  TASKS.forEach(t=>L.push(`${t} : ${s.tasks[t]}${paren(s.taskNotes[t])}`));
+  L.push("","INFO ASTREINTE : ");
+  const ast=s.ast.filter(a=>a.room);
+  if(ast.length)ast.forEach(a=>L.push(`#${a.room} : ${a.pax||0} pax${a.note&&a.note.trim()?" "+a.note.trim():""}`));else L.push("/");
+  L.push("",`NETTOYAGE :${s.netNote.trim()?" "+s.netNote.trim():""}`);
+  L.push(`MÀB : ${roomsFr(s.mab)}${paren(s.mabNote)}`,`Arrivées : ${roomsFr(s.arr)}${paren(s.arrNote)}`,`Recouche : ${roomsFr(s.rec)}${paren(s.recNote)}`,"");
+  const pax=parseInt(s.pdjPax)||0;
+  L.push(`PDJ : ${pax?pax+" pax":"/"}`);
+  if(pax)s.pdjTables.split("\n").map(x=>x.trim()).filter(Boolean).forEach(x=>L.push(x));
+  L.push("","PRÉCISIONS");
+  const P=[];
+  if(s.strip.length)P.push(`- Destripage des chambres, il manque ${roomsFr(s.strip)}`);
+  s.notes.split("\n").map(x=>x.trim()).filter(Boolean).forEach(x=>P.push(bullet(x)));
+  const pm=perm.replace(/\s+$/,"").replace(/^\s*\n/,"");
+  if(pm){if(P.length)P.push("");P.push(pm)}
+  const N2=s.notes2.split("\n").map(x=>x.trim()).filter(Boolean).map(bullet);
+  if(N2.length){if(P.length)P.push("");P.push(...N2)}
+  if(!P.length)P.push("/");
+  L.push(...P,"","Bonne soirée à tous 😊");
+  return L.join("\n");
+}
+function refresh(){
+  const t=build();$("preview").textContent=t;
+  $("wa").href="https://api.whatsapp.com/send?text="+encodeURIComponent(t);
+}
+
 /* ---------- sauvegarde + synchro Firebase ---------- */
 let dbRef=null,syncReady=false,pushTimer=null;
 function commit(){updated=Date.now();saveLocal();refresh();schedulePush()}
-function schedulePush(){if(!syncReady)return;clearTimeout(pushTimer);pushTimer=setTimeout(push,400)}
-/* Firebase refuse les clés avec "/" ou "." : les tâches sont envoyées sous forme de liste, dans l'ordre */
-const toRemote=()=>({s:Object.assign({},s,{tasks:TASKS.map(t=>s.tasks[t])}),rooms,updated});
+function schedulePush(){if(!syncReady)return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>push(),500)}
+/* Firebase refuse les clés avec "/" ou "." : les tâches sont envoyées sous forme de listes, dans l'ordre */
+const toRemote=()=>({s:Object.assign({},s,{tasks:TASKS.map(t=>s.tasks[t]),taskNotes:TASKS.map(t=>s.taskNotes[t]||"")}),perm,rooms,updated});
 function push(extra){
   if(!syncReady||!dbRef)return Promise.resolve();setSync("☁️ Envoi…");
-  try{
-    return set(dbRef,Object.assign(toRemote(),extra||{})).then(()=>setSync("☁️ Synchronisé")).catch(e=>{console.error(e);setSync("⚠️ Synchro impossible")});
-  }catch(e){console.error(e);setSync("⚠️ Synchro impossible");return Promise.resolve()}
+  try{return set(dbRef,Object.assign(toRemote(),extra||{})).then(()=>setSync("☁️ Synchronisé")).catch(e=>{console.error(e);setSync("⚠️ Synchro impossible")})}
+  catch(e){console.error(e);setSync("⚠️ Synchro impossible");return Promise.resolve()}
 }
-function applyRemote(r){
-  s=clean(r.s);if(r.rooms)rooms=arr(r.rooms).map(String);updated=r.updated||0;saveLocal();renderAll();
-}
+function applyRemote(r){s=clean(r.s);if(r.rooms)rooms=arr(r.rooms).map(String);if(typeof r.perm==="string")perm=r.perm;updated=r.updated||0;saveLocal();renderAll()}
 function showBanner(){const b=$("banner");b.classList.add("show");setTimeout(()=>b.classList.remove("show"),8000)}
 function startSync(onReady){
   try{
@@ -258,8 +298,7 @@ function startSync(onReady){
     onValue(dbRef,snap=>{
       const r=snap.val();const ru=(r&&r.updated)||0;
       if(first){first=false;syncReady=true;
-        /* données saisies avant la synchro (ancienne version) : elles passent en priorité */
-        if(!updated&&JSON.stringify(s)!==JSON.stringify(blank())){updated=Date.now();saveLocal()}
+        if(!updated&&(JSON.stringify(s)!==JSON.stringify(blank())||perm)){updated=Date.now();saveLocal()}
         if(onReady)onReady(r);
         else if(!r||updated>ru)push();
         else{if(ru!==updated)applyRemote(r);setSync("☁️ Synchronisé")}
@@ -275,45 +314,56 @@ function urlPatch(){
   const q=new URLSearchParams(location.search);
   if(!q.has("r"))return null;
   const nums=v=>(String(v||"").match(/\d+/g)||[]);
-  const ns={};
-  ns.ast=String(q.get("ast")||"").split(/[,;]/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/(\d+)\s*[:x-]\s*(\d+)/);return m?{room:m[1],pax:m[2]}:null}).filter(Boolean);
-  ns.mab=nums(q.get("mab"));ns.arr=nums(q.get("arr"));ns.rec=nums(q.get("rec"));
-  ns.pdjPax=String(parseInt(q.get("pdj"))||"");ns.pdjTables=(q.get("tables")||"").trim();
-  ns.notes=(q.get("prec")||"").split("|").map(x=>x.trim()).filter(x=>x&&x!=="/").join("\n");
+  const p={};
+  p.ast=String(q.get("ast")||"").split(/[,;]/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(\d+)\s*:\s*(\d+)\s*(?::\s*(.*))?$/);return m?{room:m[1],pax:m[2],note:(m[3]||"").trim()}:null}).filter(Boolean);
+  p.mab=nums(q.get("mab"));p.arr=nums(q.get("arr"));p.rec=nums(q.get("rec"));
+  p.pdjPax=String(parseInt(q.get("pdj"))||"");
+  p.pdjTables=(q.get("tables")||"").split("|").map(x=>x.trim()).filter(Boolean).join("\n");
+  p.prec=(q.get("prec")||"").split("|").map(x=>x.trim()).filter(x=>x&&x!=="/");
   history.replaceState(null,"",location.pathname);
+  return p;
+}
+function applyPatch(base,p){
+  const ns=clean(base);
+  ns.ast=p.ast;ns.mab=p.mab;ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;
+  const have=new Set(ns.notes.split("\n").map(norm));
+  p.prec.forEach(x=>{if(!have.has(norm(x))&&!have.has(norm("- "+x)))ns.notes+=(ns.notes.trim()?"\n":"")+x});
   return ns;
 }
 
-/* ---------- import texte (secours) ---------- */
+/* ---------- import d'un rapport texte (secours) ---------- */
 function parseReport(txt){
   const ns=clean(s);let section="";let found=false;
-  ["ast","mab","arr","rec"].forEach(k=>ns[k]=[]);ns.pdjPax="";ns.pdjTables="";
+  ["ast","mab","arr","rec","strip"].forEach(k=>ns[k]=[]);["pdjPax","pdjTables","netNote","mabNote","arrNote","recNote"].forEach(k=>ns[k]="");
   const after=l=>l.split(":").slice(1).join(":").trim();
-  const nums=v=>(v.match(/\d+/g)||[]);
-  const notes=[];
+  const roomsAndNote=v=>{const i=v.indexOf("(");const head=i>-1?v.slice(0,i):v;const note=i>-1?v.slice(i+1).replace(/\)\s*$/,""):"";return{rooms:head.match(/\d+/g)||[],note:note.trim()}};
+  const permLines=new Set(perm.split("\n").map(norm).filter(Boolean));
+  const tables=[],notes=[],notes2=[];let seenPerm=false;
   txt.replace(/\r/g,"").split("\n").forEach(raw=>{
-    const l=raw.trim().replace(/^[*_`]+|[*_`]+$/g,"");const n=norm(l);
-    if(!l||n.startsWith("rapport de shift"))return;
-    if(n.startsWith("info astreinte")||n.startsWith("astreinte")){section="ast";found=true;return}
-    if(n.startsWith("nettoyage")){section="net";found=true;return}
+    const l=raw.trim();const n=norm(l);
+    if(!l)return;
+    if(n.startsWith("rapport de shift"))return;
+    if(n.startsWith("info astreinte")){section="ast";found=true;return}
+    if(n.startsWith("nettoyage")){section="net";found=true;ns.netNote=after(l);return}
     if(n.startsWith("precisions")){section="prec";found=true;return}
     if(n.startsWith("bonne soiree")){section="end";return}
-    if(n.startsWith("pdj")){section="pdj";found=true;ns.pdjPax=String(parseInt(after(l))||"");return}
+    if(section!=="prec"&&n.startsWith("pdj")){section="pdj";found=true;ns.pdjPax=String(parseInt(after(l))||"");return}
     const ti=TASKS.map(norm).findIndex(t=>n.startsWith(t));
-    if(ti>-1){const v=norm(after(l));ns.tasks[TASKS[ti]]=STATES.find(x=>norm(x)===v)||"/";section="tasks";return}
-    if(n.startsWith("sachets de the")){ns.the=after(l);return}
-    if(section==="ast"){const m=l.match(/#?\s*(\d+)\s*:\s*(\d+)/);if(m)ns.ast.push({room:m[1],pax:m[2]});return}
+    if(ti>-1&&section!=="prec"){const v=after(l);const m=v.match(/^([^()]*?)\s*(?:\((.*)\))?\s*$/);const st=STATES.find(x=>norm(x)===norm(m?m[1]:v));
+      ns.tasks[TASKS[ti]]=st||"/";ns.taskNotes[TASKS[ti]]=st?(m&&m[2]||"").trim():v;section="tasks";return}
+    if(section==="ast"){const m=l.match(/^#?\s*(\d+)\s*:\s*(\d+)\s*(?:pax)?\s*(.*)$/i);if(m)ns.ast.push({room:m[1],pax:m[2],note:m[3].trim()});return}
     if(section==="net"){
-      if(n.startsWith("mab"))ns.mab=nums(after(l));
-      else if(n.startsWith("arrivee"))ns.arr=nums(after(l));
-      else if(n.startsWith("recouche"))ns.rec=nums(after(l));
+      const k=n.startsWith("mab")?"mab":n.startsWith("arrivee")?"arr":n.startsWith("recouche")?"rec":null;
+      if(k){const r=roomsAndNote(after(l));ns[k]=r.rooms;ns[k+"Note"]=r.note}
       return}
-    if(section==="pdj"){if(!ns.pdjTables&&l!=="/")ns.pdjTables=l.replace(/^[(]|[)]$/g,"");return}
+    if(section==="pdj"){if(l!=="/")tables.push(l);return}
     if(section==="prec"){
-      if(n.includes("destripage")){ns.strip=nums(l.split(/manque/i).slice(1).join(" "));return}
-      if(l!=="/")notes.push(l.replace(/^[-•]\s*/,""));}
+      if(n.includes("destripage")){ns.strip=(l.split(/manque/i).slice(1).join(" ").match(/\d+/g)||[]);return}
+      if(l==="/")return;
+      if(permLines.has(n)){seenPerm=true;return}
+      (seenPerm?notes2:notes).push(l)}
   });
-  ns.notes=notes.join("\n");
+  ns.pdjTables=tables.join("\n");ns.notes=notes.join("\n");ns.notes2=notes2.join("\n");
   return found?ns:null;
 }
 
@@ -324,54 +374,53 @@ function claudePrompt(){
   return [
 `Fais mon rapport de shift du soir du ${soir}, avec Claude in Chrome sur mon Mac.`,
 ``,
-`1. Asterio : regarde d'abord les onglets de ton groupe. S'il y a déjà un onglet Asterio connecté, utilise-le et n'en ouvre pas d'autre. Sinon, ouvre UN SEUL onglet sur ${ASTERIO}. Si la page de connexion s'affiche, ne tape rien : demande-moi de cliquer sur « Se connecter » sur le Mac (mes codes sont enregistrés dans Chrome) et attends que je réponde « fait ». Ne tape jamais de code PIN : passe par le menu (icône grille en haut à gauche) puis Front-Office pour avoir le planning Hébergement.`,
+`1. Asterio : regarde d'abord les onglets de ton groupe. S'il y a déjà un onglet Asterio connecté, utilise-le et n'en ouvre pas d'autre. Sinon, ouvre UN SEUL onglet sur ${ASTERIO}. Si la page de connexion ou une demande de code de double authentification (envoyé par mail à la réception) s'affiche, ne tape rien : demande-moi de m'en occuper sur le Mac et attends que je réponde « fait ». Ne tape jamais de code PIN : passe par le menu (icône grille en haut à gauche) puis Front-Office pour avoir le planning Hébergement.`,
 ``,
 `2. Lis le planning (une colonne = une nuit) :`,
-`- ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre d'adultes de chaque réservation.`,
+`- ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre de personnes de chaque réservation (précise s'il y a un enfant et son âge, si c'est indiqué).`,
 `- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
-`- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier de la fiche) de chaque chambre occupée et compte les lignes « Petit-déjeuner » (les observations ne suffisent pas). Une table par chambre (ex. « 1 table de 3, 1 table de 2 »).`,
-`Règles : ne modifie rien. Ferme une fiche en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Pour sortir d'un dossier, clique QUITTER. Laisse l'onglet Asterio ouvert à la fin.`,
+`- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier de la fiche) de chaque chambre occupée et compte les lignes « Petit-déjeuner » (les observations ne suffisent pas, mais note les heures ou demandes de PDJ en chambre qui y sont écrites). Regroupe les tables comme « 4 tables de 2 », « 1 table de 4 ».`,
+`Règles : ne modifie rien. Ferme une fiche en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Pour sortir d'un dossier, clique QUITTER. Laisse l'onglet Asterio ouvert à la fin (avec la double authentification, il ne faut pas le fermer).`,
 ``,
-`3. Envoie le rapport dans mon app : ouvre dans ton groupe cette adresse en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte, numéros séparés par des virgules, rien après le = s'il n'y a rien, + à la place des espaces, | entre deux précisions) :`,
-`${APP_URL}?r=1&ast=3:2,5:2&mab=3&arr=2,9&rec=5&pdj=4&tables=2+tables+de+2&prec=Chambre+5+en+option`,
+`3. Envoie le rapport dans mon app : ouvre dans ton groupe cette adresse en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte, avec :précision si besoin ; numéros séparés par des virgules ; rien après le = s'il n'y a rien ; + à la place des espaces ; | entre deux lignes de tables ou deux précisions) :`,
+`${APP_URL}?r=1&ast=2:2,4:3:dont+un+enfant+de+3+ans&mab=3,4&arr=3,4,6,9&rec=2,5,8&pdj=12&tables=4+tables+de+2|1+table+de+4+vers+9h00&prec=La+%233+partira+à+14h00+maximum`,
 `Attends que la page affiche « Envoyé au téléphone ✓ » sous le titre, puis ferme cet onglet (garde celui d'Asterio).`,
 ``,
-`4. Réponds-moi en quelques lignes : le rapport, et les points à vérifier.`
+`4. Réponds-moi en quelques lignes : ce que tu as trouvé, et les points à vérifier.`
   ].join("\n");
 }
 
 /* ---------- événements ---------- */
-$("repDate").value=repDate;
 const setClaudeLink=()=>{$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt())};
-setClaudeLink();
+$("repDate").value=repDate;setClaudeLink();
 $("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();setClaudeLink()};
 /* la demande est aussi copiée, au cas où Claude s'ouvrirait vide */
 $("claudeBtn").addEventListener("click",()=>{try{navigator.clipboard.writeText(claudePrompt()).catch(()=>{})}catch(e){}});
-$("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1"});renderAst();commit()};
+$("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1",note:""});renderAst();commit()};
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();commit();toast("Chambres mises à jour")}};
 $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
   if(!ns){toast("Format non reconnu");return}
   s=ns;$("pasteArea").value="";renderAll();commit();toast("Rapport importé ✓")};
 $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(build());toast("Copié ✓")}catch(e){
   const r=document.createRange();r.selectNodeContents($("preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
-$("reset").onclick=()=>{if($("reset").dataset.c){s=blank();delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();commit();toast("Rapport vidé")}
+$("reset").onclick=()=>{if($("reset").dataset.c){s=blank();delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();commit();toast("Rapport vidé (messages permanents gardés)")}
   else{$("reset").dataset.c="1";$("reset").textContent="Confirmer ?";setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport"},3000)}};
 
 $("date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
 load();
 const patch=urlPatch();
 if(patch){
-  /* garde les tâches déjà saisies (sur le téléphone) et remplace seulement ce que Claude a lu dans Asterio */
-  s=Object.assign(clean(s),patch);updated=Date.now();saveLocal();renderAll();showBanner();
+  /* garde ce qui a été saisi sur le téléphone et remplace seulement ce que Claude a lu dans Asterio */
+  s=applyPatch(s,patch);updated=Date.now();saveLocal();renderAll();showBanner();
   startSync(r=>{
-    if(r&&r.s)s=Object.assign(clean(r.s),patch);
+    if(r&&r.s){s=applyPatch(r.s,patch);if(typeof r.perm==="string")perm=r.perm}
     updated=Date.now();saveLocal();renderAll();
     push({fromClaude:updated}).then(()=>setSync("☁️ Envoyé au téléphone ✓"));
   });
 }else{renderAll();startSync()}
 
 /* pour les tests */
-window.__rapport={parseReport,build,claudePrompt,get s(){return s}};
+window.__rapport={parseReport,build,claudePrompt,applyPatch,get s(){return s},set s(v){s=v},get perm(){return perm},set perm(v){perm=v}};
 </script>
 </body>
 </html>
