@@ -116,12 +116,8 @@
 <div class="card">
   <h2>Précisions</h2>
   <div class="sub">Destripage — chambres manquantes</div><div class="chips" data-group="strip"></div>
-  <div class="sub">Précisions du jour (une par ligne, effacées au nouveau rapport)</div>
-  <textarea id="notes" placeholder="La #3 partira à 14h00 maximum&#10;Demain concert d'Armand"></textarea>
-  <div class="sub">Messages permanents (gardés d'un rapport à l'autre, envoyés tels quels)</div>
-  <textarea id="perm" class="big" placeholder="* Double authentification…&#10;&#10;Point sur les chauffages…"></textarea>
-  <div class="sub">Infos du jour à la fin (après les messages permanents, effacées au nouveau rapport)</div>
-  <textarea id="notes2" placeholder="Demain concert d'Armand (que 4 pax pour le moment 🫠)"></textarea>
+  <div class="sub">Texte des précisions (envoyé tel quel, gardé au nouveau rapport)</div>
+  <textarea id="notes" class="big" placeholder="- La #3 partira à 14h00 maximum&#10;&#10;Point sur les chauffages :&#10;* …"></textarea>
 </div>
 
 <div class="card">
@@ -155,10 +151,9 @@ const STATES=["/","A voir","A faire","Fait"];
 const KEY="rapportShift_v1";
 const blankTasks=()=>Object.fromEntries(TASKS.map(t=>[t,"/"]));
 const blankNotes=()=>Object.fromEntries(TASKS.map(t=>[t,""]));
-const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",notes2:""});
+const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:""});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let s=blank();
-let perm="";
 let updated=0;
 let repDate=todayISO();
 
@@ -169,6 +164,10 @@ const arr=v=>Array.isArray(v)?v:(v&&typeof v==="object"?Object.keys(v).sort((a,b
 const state=v=>STATES.find(x=>norm(x)===norm(v))||"/";
 function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
 
+/* anciennes versions : précisions du jour + messages permanents + infos de fin => un seul texte */
+function joinNotes(...parts){return parts.map(v=>String(v||"").replace(/\s+$/,"")).filter(v=>v.trim()).join("\n\n")}
+const oldBul=t=>String(t||"").split("\n").map(l=>l.trim()&&!/^[-*•#]/.test(l.trim())?"- "+l.trim():l).join("\n");
+const isOld=x=>x.perm!==undefined||x.notes2!==undefined;
 /* Remet n'importe quelle donnée (ancienne version, Firebase…) dans le bon format */
 function clean(x){
   x=x||{};const b=blank();
@@ -180,10 +179,11 @@ function clean(x){
     ast:arr(x.ast).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??""),note:String(a.note||"")})),
     netNote:x.netNote||"",mab:arr(x.mab).map(String),mabNote:x.mabNote||"",arr:arr(x.arr).map(String),arrNote:x.arrNote||"",
     rec:arr(x.rec).map(String),recNote:x.recNote||"",pdjPax:String(x.pdjPax??""),pdjTables:x.pdjTables||"",
-    strip:arr(x.strip).map(String),notes:x.notes||"",notes2:x.notes2||""};
+    strip:arr(x.strip).map(String),notes:isOld(x)?joinNotes(oldBul(x.notes),x.perm,oldBul(x.notes2)):String(x.notes||"")};
 }
-const DEFAULT_NOTES="La #3 partira à 14h00 maximum";
-const DEFAULT_PERM=`* Nous avons activé aujourd'hui la double authentification F2A pour Asterio. Cela signifie qu'à chaque nouvelle connexion, un mail avec un code unique sera envoyé sur la boîte mail de réception. Afin d'éviter de multiplier cette opération, il est préférable de laisser Asterio ouvert en permanence et de ne pas fermer la page. Lors d'une inutilisation prolongée comme avant, il faudra se reconnecter.
+const DEFAULT_NOTES=`- La #3 partira à 14h00 maximum
+
+* Nous avons activé aujourd'hui la double authentification F2A pour Asterio. Cela signifie qu'à chaque nouvelle connexion, un mail avec un code unique sera envoyé sur la boîte mail de réception. Afin d'éviter de multiplier cette opération, il est préférable de laisser Asterio ouvert en permanence et de ne pas fermer la page. Lors d'une inutilisation prolongée comme avant, il faudra se reconnecter.
 
 Point sur les chauffage et sèches serviettes :
 * Ne pas oublier de couper les chauffages dès le check-out des clients (à 16,5°C) et les remettre en route pour les arrivées dès 14h00/14h30 (à 20,5°C).
@@ -194,17 +194,15 @@ Point sur les amenities en chambre (au quotidien) :
 - Par respect pour les femmes de chambre, merci de bien vous essuyer les pieds AVANT d'entrer dans la chambre et d'enjamber le tapis afin de ne pas laisser de trace dessus.
 - Ne pas oublier de nettoyer et vider les machines à café en #1 et #7 ainsi que les bouilloires dans TOUTES les chambres (avec un petit fond de vinaigre comme je vous ai montré, pas besoin de frotter, bien rincer et sécher ensuite).
 - Ne pas oublier les livres orange Teritoria sur les lits avec le programme fidélité en première page`;
-const DEFAULTS_KEY="rapportShift_defaults_v1";
+const DEFAULTS_KEY="rapportShift_defaults_v2";
 function applyDefaultsOnce(){
   try{if(localStorage.getItem(DEFAULTS_KEY))return false;localStorage.setItem(DEFAULTS_KEY,"1")}catch(e){return false}
-  let changed=false;
-  if(!perm.trim()){perm=DEFAULT_PERM;changed=true}
-  if(!s.notes.trim()){s.notes=DEFAULT_NOTES;changed=true}
-  if(changed){updated=Date.now();saveLocal()}
-  return changed;
+  /* remplace le pré-remplissage de la version précédente (« La #3… » seul) par le texte complet */
+  if(!s.notes.trim()||["la #3 partira a 14h00 maximum","- la #3 partira a 14h00 maximum"].includes(norm(s.notes))){s.notes=DEFAULT_NOTES;updated=Date.now();saveLocal();return true}
+  return false;
 }
-function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=arr(d.rooms).map(String);if(d.s)s=clean(d.s);perm=d.perm||"";updated=d.updated||0}}catch(e){}}
-function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({rooms,s,perm,updated}))}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=arr(d.rooms).map(String);if(d.s)s=clean(Object.assign({},d.s,{perm:d.perm}));updated=d.updated||0}}catch(e){}}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({rooms,s,updated}))}catch(e){}}
 
 /* ---------- rendu ---------- */
 function renderTasks(){
@@ -247,11 +245,9 @@ function renderAst(){
     $("astList").appendChild(w);
   });
 }
-const FIELDS=["netNote","mabNote","arrNote","recNote","pdjPax","pdjTables","notes","notes2"];
+const FIELDS=["netNote","mabNote","arrNote","recNote","pdjPax","pdjTables","notes"];
 function bindInputs(){
   FIELDS.forEach(k=>{if(document.activeElement!==$(k))$(k).value=s[k];$(k).oninput=()=>{s[k]=$(k).value;commit()}});
-  if(document.activeElement!==$("perm"))$("perm").value=perm;
-  $("perm").oninput=()=>{perm=$("perm").value;commit()};
   $("roomsCfg").value=rooms.join(",");
 }
 function renderAll(){renderTasks();renderChips();renderAst();bindInputs();refresh()}
@@ -261,7 +257,6 @@ function setSync(t){$("sync").textContent=t}
 /* ---------- texte du rapport ---------- */
 const paren=n=>n&&n.trim()?` (${n.trim()})`:"";
 function roomsFr(a){const l=sortRooms(a);if(!l.length)return"/";if(l.length===1)return l[0];return l.slice(0,-1).join(", ")+" et "+l[l.length-1]}
-const bullet=l=>/^[-*•#]/.test(l)?l:"- "+l;
 function build(){
   const L=["RAPPORT DE SHIFT:",""];
   TASKS.forEach(t=>L.push(`${t} : ${s.tasks[t]}${paren(s.taskNotes[t])}`));
@@ -276,11 +271,8 @@ function build(){
   L.push("","PRÉCISIONS");
   const P=[];
   if(s.strip.length)P.push(`- Destripage des chambres, il manque ${roomsFr(s.strip)}`);
-  s.notes.split("\n").map(x=>x.trim()).filter(Boolean).forEach(x=>P.push(bullet(x)));
-  const pm=perm.replace(/\s+$/,"").replace(/^\s*\n/,"");
-  if(pm){if(P.length)P.push("");P.push(pm)}
-  const N2=s.notes2.split("\n").map(x=>x.trim()).filter(Boolean).map(bullet);
-  if(N2.length){if(P.length)P.push("");P.push(...N2)}
+  const txt=s.notes.replace(/\s+$/,"").replace(/^(\s*\n)+/,"");
+  if(txt)P.push(...txt.split("\n").map(x=>x.replace(/\s+$/,"")));
   if(!P.length)P.push("/");
   L.push(...P,"","Bonne soirée à tous 😊");
   return L.join("\n");
@@ -295,13 +287,13 @@ let dbRef=null,syncReady=false,pushTimer=null;
 function commit(){updated=Date.now();saveLocal();refresh();schedulePush()}
 function schedulePush(){if(!syncReady)return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>push(),500)}
 /* Firebase refuse les clés avec "/" ou "." : les tâches sont envoyées sous forme de listes, dans l'ordre */
-const toRemote=()=>({s:Object.assign({},s,{tasks:TASKS.map(t=>s.tasks[t]),taskNotes:TASKS.map(t=>s.taskNotes[t]||"")}),perm,rooms,updated});
+const toRemote=()=>({s:Object.assign({},s,{tasks:TASKS.map(t=>s.tasks[t]),taskNotes:TASKS.map(t=>s.taskNotes[t]||"")}),rooms,updated});
 function push(extra){
   if(!syncReady||!dbRef)return Promise.resolve();setSync("☁️ Envoi…");
   try{return set(dbRef,Object.assign(toRemote(),extra||{})).then(()=>setSync("☁️ Synchronisé")).catch(e=>{console.error(e);setSync("⚠️ Synchro impossible")})}
   catch(e){console.error(e);setSync("⚠️ Synchro impossible");return Promise.resolve()}
 }
-function applyRemote(r){s=clean(r.s);if(r.rooms)rooms=arr(r.rooms).map(String);if(typeof r.perm==="string")perm=r.perm;updated=r.updated||0;saveLocal();renderAll()}
+function applyRemote(r){s=clean(Object.assign({},r.s,{perm:r.perm}));if(r.rooms)rooms=arr(r.rooms).map(String);updated=r.updated||0;saveLocal();renderAll()}
 function showBanner(){const b=$("banner");b.classList.add("show");setTimeout(()=>b.classList.remove("show"),8000)}
 function startSync(onReady){
   try{
@@ -319,7 +311,7 @@ function startSync(onReady){
     onValue(dbRef,snap=>{
       const r=snap.val();const ru=(r&&r.updated)||0;
       if(first){first=false;syncReady=true;
-        if(!updated&&(JSON.stringify(s)!==JSON.stringify(blank())||perm)){updated=Date.now();saveLocal()}
+        if(!updated&&JSON.stringify(s)!==JSON.stringify(blank())){updated=Date.now();saveLocal()}
         if(onReady)onReady(r);
         else if(!r||updated>ru)push();
         else{if(ru!==updated)applyRemote(r);setSync("☁️ Synchronisé")}
@@ -355,10 +347,12 @@ function parseReport(txt){
   ["ast","mab","arr","rec","strip"].forEach(k=>ns[k]=[]);["pdjPax","pdjTables","netNote","mabNote","arrNote","recNote"].forEach(k=>ns[k]="");
   const after=l=>l.split(":").slice(1).join(":").trim();
   const roomsAndNote=v=>{const i=v.indexOf("(");const head=i>-1?v.slice(0,i):v;const note=i>-1?v.slice(i+1).replace(/\)\s*$/,""):"";return{rooms:head.match(/\d+/g)||[],note:note.trim()}};
-  const permLines=new Set(perm.split("\n").map(norm).filter(Boolean));
-  const tables=[],notes=[],notes2=[];let seenPerm=false;
+  const tables=[],notes=[];
   txt.replace(/\r/g,"").split("\n").forEach(raw=>{
     const l=raw.trim();const n=norm(l);
+    if(section==="prec"&&!n.startsWith("bonne soiree")){
+      if(n.includes("destripage")){ns.strip=(l.split(/manque/i).slice(1).join(" ").match(/\d+/g)||[]);return}
+      if(l!=="/")notes.push(raw.replace(/\s+$/,""));return}
     if(!l)return;
     if(n.startsWith("rapport de shift"))return;
     if(n.startsWith("info astreinte")){section="ast";found=true;return}
@@ -375,13 +369,8 @@ function parseReport(txt){
       if(k){const r=roomsAndNote(after(l));ns[k]=r.rooms;ns[k+"Note"]=r.note}
       return}
     if(section==="pdj"){if(l!=="/")tables.push(l);return}
-    if(section==="prec"){
-      if(n.includes("destripage")){ns.strip=(l.split(/manque/i).slice(1).join(" ").match(/\d+/g)||[]);return}
-      if(l==="/")return;
-      if(permLines.has(n)){seenPerm=true;return}
-      (seenPerm?notes2:notes).push(l)}
   });
-  ns.pdjTables=tables.join("\n");ns.notes=notes.join("\n");ns.notes2=notes2.join("\n");
+  ns.pdjTables=tables.join("\n");ns.notes=notes.join("\n").replace(/^(\s*\n)+/,"").replace(/\s+$/,"");
   return found?ns:null;
 }
 
@@ -421,7 +410,7 @@ $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
   s=ns;$("pasteArea").value="";renderAll();commit();toast("Rapport importé ✓")};
 $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(build());toast("Copié ✓")}catch(e){
   const r=document.createRange();r.selectNodeContents($("preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
-$("reset").onclick=()=>{if($("reset").dataset.c){s=blank();delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();commit();toast("Rapport vidé (messages permanents gardés)")}
+$("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes;s=blank();s.notes=keep;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();commit();toast("Rapport vidé (précisions gardées)")}
   else{$("reset").dataset.c="1";$("reset").textContent="Confirmer ?";setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport"},3000)}};
 
 $("date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
@@ -432,14 +421,14 @@ if(patch){
   /* garde ce qui a été saisi sur le téléphone et remplace seulement ce que Claude a lu dans Asterio */
   s=applyPatch(s,patch);updated=Date.now();saveLocal();renderAll();showBanner();
   startSync(r=>{
-    if(r&&r.s){s=applyPatch(r.s,patch);if(typeof r.perm==="string")perm=r.perm}
+    if(r&&r.s)s=applyPatch(Object.assign({},r.s,{perm:r.perm}),patch);
     updated=Date.now();saveLocal();renderAll();
     push({fromClaude:updated}).then(()=>setSync("☁️ Envoyé au téléphone ✓"));
   });
 }else{renderAll();startSync()}
 
 /* pour les tests */
-window.__rapport={parseReport,build,claudePrompt,applyPatch,get s(){return s},set s(v){s=v},get perm(){return perm},set perm(v){perm=v}};
+window.__rapport={parseReport,build,claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
