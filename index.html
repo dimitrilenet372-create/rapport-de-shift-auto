@@ -182,6 +182,27 @@ function clean(x){
     rec:arr(x.rec).map(String),recNote:x.recNote||"",pdjPax:String(x.pdjPax??""),pdjTables:x.pdjTables||"",
     strip:arr(x.strip).map(String),notes:x.notes||"",notes2:x.notes2||""};
 }
+const DEFAULT_NOTES="La #3 partira à 14h00 maximum";
+const DEFAULT_PERM=`* Nous avons activé aujourd'hui la double authentification F2A pour Asterio. Cela signifie qu'à chaque nouvelle connexion, un mail avec un code unique sera envoyé sur la boîte mail de réception. Afin d'éviter de multiplier cette opération, il est préférable de laisser Asterio ouvert en permanence et de ne pas fermer la page. Lors d'une inutilisation prolongée comme avant, il faudra se reconnecter.
+
+Point sur les chauffage et sèches serviettes :
+* Ne pas oublier de couper les chauffages dès le check-out des clients (à 16,5°C) et les remettre en route pour les arrivées dès 14h00/14h30 (à 20,5°C).
+* Ne pas oublier de couper les sèche-serviettes dès que possible si la chambre n'est pas relouée et les allumer vers 14h30 pour les arrivées du jour. (à 21,00°C sur le mode🔅).
+* Lors des check-in, merci de bien préciser aux clients, lorsque vous êtes dans la chambre avec eux, que le chauffage se règle avec le thermostat blanc sur le mur uniquement afin de ne pas dérégler les chauffages car ils sont connectés.
+
+Point sur les amenities en chambre (au quotidien) :
+- Par respect pour les femmes de chambre, merci de bien vous essuyer les pieds AVANT d'entrer dans la chambre et d'enjamber le tapis afin de ne pas laisser de trace dessus.
+- Ne pas oublier de nettoyer et vider les machines à café en #1 et #7 ainsi que les bouilloires dans TOUTES les chambres (avec un petit fond de vinaigre comme je vous ai montré, pas besoin de frotter, bien rincer et sécher ensuite).
+- Ne pas oublier les livres orange Teritoria sur les lits avec le programme fidélité en première page`;
+const DEFAULTS_KEY="rapportShift_defaults_v1";
+function applyDefaultsOnce(){
+  try{if(localStorage.getItem(DEFAULTS_KEY))return false;localStorage.setItem(DEFAULTS_KEY,"1")}catch(e){return false}
+  let changed=false;
+  if(!perm.trim()){perm=DEFAULT_PERM;changed=true}
+  if(!s.notes.trim()){s.notes=DEFAULT_NOTES;changed=true}
+  if(changed){updated=Date.now();saveLocal()}
+  return changed;
+}
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=arr(d.rooms).map(String);if(d.s)s=clean(d.s);perm=d.perm||"";updated=d.updated||0}}catch(e){}}
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({rooms,s,perm,updated}))}catch(e){}}
 
@@ -315,19 +336,16 @@ function urlPatch(){
   if(!q.has("r"))return null;
   const nums=v=>(String(v||"").match(/\d+/g)||[]);
   const p={};
-  p.ast=String(q.get("ast")||"").split(/[,;]/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(\d+)\s*:\s*(\d+)\s*(?::\s*(.*))?$/);return m?{room:m[1],pax:m[2],note:(m[3]||"").trim()}:null}).filter(Boolean);
+  p.ast=String(q.get("ast")||"").split(/[,;]/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(\d+)\s*:\s*(\d+)\s*(?::\s*(.*))?$/);return m?{room:m[1],pax:m[2],note:""}:null}).filter(Boolean);
   p.mab=nums(q.get("mab"));p.arr=nums(q.get("arr"));p.rec=nums(q.get("rec"));
   p.pdjPax=String(parseInt(q.get("pdj"))||"");
   p.pdjTables=(q.get("tables")||"").split("|").map(x=>x.trim()).filter(Boolean).join("\n");
-  p.prec=(q.get("prec")||"").split("|").map(x=>x.trim()).filter(x=>x&&x!=="/");
   history.replaceState(null,"",location.pathname);
   return p;
 }
 function applyPatch(base,p){
   const ns=clean(base);
   ns.ast=p.ast;ns.mab=p.mab;ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;
-  const have=new Set(ns.notes.split("\n").map(norm));
-  p.prec.forEach(x=>{if(!have.has(norm(x))&&!have.has(norm("- "+x)))ns.notes+=(ns.notes.trim()?"\n":"")+x});
   return ns;
 }
 
@@ -374,19 +392,19 @@ function claudePrompt(){
   return [
 `Fais mon rapport de shift du soir du ${soir}, avec Claude in Chrome sur mon Mac.`,
 ``,
-`1. Asterio : regarde d'abord les onglets de ton groupe. S'il y a déjà un onglet Asterio connecté, utilise-le et n'en ouvre pas d'autre. Sinon, ouvre UN SEUL onglet sur ${ASTERIO}. Si la page de connexion ou une demande de code de double authentification (envoyé par mail à la réception) s'affiche, ne tape rien : demande-moi de m'en occuper sur le Mac et attends que je réponde « fait ». Ne tape jamais de code PIN : passe par le menu (icône grille en haut à gauche) puis Front-Office pour avoir le planning Hébergement.`,
+`1. Asterio : regarde d'abord les onglets de ton groupe. S'il y a déjà un onglet Asterio connecté, utilise-le et n'en ouvre pas d'autre. Sinon, ouvre UN SEUL onglet sur ${ASTERIO}. Si la page de connexion s'affiche, ne tape rien : demande-moi de cliquer sur « Se connecter » sur le Mac (mes codes sont enregistrés dans Chrome) et attends que je réponde « fait ». Ne tape jamais de code PIN : passe par le menu (icône grille en haut à gauche) puis Front-Office pour avoir le planning Hébergement.`,
 ``,
 `2. Lis le planning (une colonne = une nuit) :`,
-`- ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre de personnes de chaque réservation (précise s'il y a un enfant et son âge, si c'est indiqué).`,
+`- ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre d'adultes de chaque réservation.`,
 `- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
-`- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier de la fiche) de chaque chambre occupée et compte les lignes « Petit-déjeuner » (les observations ne suffisent pas, mais note les heures ou demandes de PDJ en chambre qui y sont écrites). Regroupe les tables comme « 4 tables de 2 », « 1 table de 4 ».`,
-`Règles : ne modifie rien. Ferme une fiche en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Pour sortir d'un dossier, clique QUITTER. Laisse l'onglet Asterio ouvert à la fin (avec la double authentification, il ne faut pas le fermer).`,
+`- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier de la fiche) de chaque chambre occupée et compte les lignes « Petit-déjeuner » (les observations ne suffisent pas). Une table par chambre (ex. « 1 table de 3, 1 table de 2 »).`,
+`Règles : ne modifie rien. Ferme une fiche en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Pour sortir d'un dossier, clique QUITTER. Laisse l'onglet Asterio ouvert à la fin.`,
 ``,
-`3. Envoie le rapport dans mon app : ouvre dans ton groupe cette adresse en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte, avec :précision si besoin ; numéros séparés par des virgules ; rien après le = s'il n'y a rien ; + à la place des espaces ; | entre deux lignes de tables ou deux précisions) :`,
-`${APP_URL}?r=1&ast=2:2,4:3:dont+un+enfant+de+3+ans&mab=3,4&arr=3,4,6,9&rec=2,5,8&pdj=12&tables=4+tables+de+2|1+table+de+4+vers+9h00&prec=La+%233+partira+à+14h00+maximum`,
+`3. Envoie le rapport dans mon app : ouvre dans ton groupe cette adresse en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte, numéros séparés par des virgules, rien après le = s'il n'y a rien, + à la place des espaces) :`,
+`${APP_URL}?r=1&ast=3:2,5:2&mab=3&arr=2,9&rec=5&pdj=4&tables=2+tables+de+2`,
 `Attends que la page affiche « Envoyé au téléphone ✓ » sous le titre, puis ferme cet onglet (garde celui d'Asterio).`,
 ``,
-`4. Réponds-moi en quelques lignes : ce que tu as trouvé, et les points à vérifier.`
+`4. Réponds-moi en quelques lignes : le rapport, et les points à vérifier.`
   ].join("\n");
 }
 
@@ -408,6 +426,7 @@ $("reset").onclick=()=>{if($("reset").dataset.c){s=blank();delete $("reset").dat
 
 $("date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
 load();
+applyDefaultsOnce();
 const patch=urlPatch();
 if(patch){
   /* garde ce qui a été saisi sur le téléphone et remplace seulement ce que Claude a lu dans Asterio */
