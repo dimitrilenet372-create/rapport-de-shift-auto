@@ -64,6 +64,11 @@
   .orow .lbl{flex:1;font-size:14px}
   .orow input{width:70px;text-align:center}
   .auto{border:none;background:none;color:var(--acc);font:inherit;font-size:12px;cursor:pointer;min-width:34px}
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:12px;position:sticky;top:8px;z-index:5}
+  .tabs button{border:none;background:none;color:var(--muted);font:inherit;font-size:14px;font-weight:600;padding:9px;border-radius:9px;cursor:pointer}
+  .tabs button.on{background:var(--acc);color:#fff}
+  .hidden{display:none}
+  .ptotal{display:flex;justify-content:space-between;font-weight:700;font-size:16px;padding:10px 2px 0;border-top:1px solid var(--line);margin-top:6px}
   .ghost{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:20px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:10;max-width:90vw;text-align:center}
   .toast.show{opacity:1}
@@ -88,6 +93,12 @@
   <p class="note">Claude s'ouvre avec la demande déjà écrite : appuie sur Envoyer. Il lit Asterio sur le Mac et <b>le rapport arrive tout seul ici</b>. Il ne te reste qu'à compléter le reste.</p>
 </div>
 
+<nav class="tabs" id="tabs">
+  <button data-tab="rapport">📝 Rapport</button>
+  <button data-tab="pdj">☕ Petit-déj</button>
+</nav>
+
+<div id="tab-rapport">
 <div class="card">
   <h2>Tâches</h2>
   <div id="tasks"></div>
@@ -150,6 +161,20 @@
     <input type="text" id="roomsCfg" style="margin-top:8px" placeholder="1,2,3,4,5,6,7,8,9,10">
   </details>
 </div>
+</div>
+
+<div id="tab-pdj" class="hidden">
+<div class="card">
+  <h2>Personnes au petit-déjeuner (demain matin)</h2>
+  <div id="pdjListBox"></div>
+  <button class="add" id="pdjAdd">+ Ajouter une chambre</button>
+  <div class="ptotal"><span>Total</span><span id="pdjTotal">0 pax</span></div>
+</div>
+<div class="card">
+  <h2>Aperçu</h2>
+  <pre id="pdjPreview"></pre>
+</div>
+</div>
 
 <div class="bar">
   <button class="btn copy" id="copy">Copier</button>
@@ -168,7 +193,7 @@ const STATES=["/","A voir","A faire","Fait"];
 const KEY="rapportShift_v1";
 const blankTasks=()=>Object.fromEntries(TASKS.map(t=>[t,"/"]));
 const blankNotes=()=>Object.fromEntries(TASKS.map(t=>[t,""]));
-const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30"});
+const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30",pdjList:[]});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let s=blank();
 let updated=0;
@@ -198,7 +223,8 @@ function clean(x){
     rec:arr(x.rec).map(String),recNote:x.recNote||"",pdjPax:String(x.pdjPax??""),pdjTables:x.pdjTables||"",
     strip:arr(x.strip).map(String),notes:isOld(x)?joinNotes(oldBul(x.notes),x.perm,oldBul(x.notes2)):String(x.notes||""),
     orderOv:Object.fromEntries(Object.entries(x.orderOv||{}).filter(([k,v])=>PRODUCTS.some(p=>p.k===k)&&v!==""&&v!==null).map(([k,v])=>[k,String(v)])),
-    orderTime:x.orderTime||"7h30"};
+    orderTime:x.orderTime||"7h30",
+    pdjList:arr(x.pdjList).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??"")}))};
 }
 const DEFAULT_NOTES=`- La #3 partira à 14h00 maximum
 
@@ -270,7 +296,7 @@ function bindInputs(){
   $("orderTime").oninput=()=>{s.orderTime=$("orderTime").value;commit()};
   $("roomsCfg").value=rooms.join(",");
 }
-function renderAll(){renderTasks();renderChips();renderAst();bindInputs();renderOrder();refresh()}
+function renderAll(){renderTasks();renderChips();renderAst();bindInputs();renderOrder();renderPdjList();refresh()}
 function toast(m){const e=$("toast");e.textContent=m;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2200)}
 function setSync(t){$("sync").textContent=t}
 
@@ -316,6 +342,41 @@ function refreshOrder(){
   $("orderWa").href=t?"https://api.whatsapp.com/send?text="+encodeURIComponent(t):"#";
 }
 
+/* ---------- onglet Petit-déj : chambres + pax, total ---------- */
+let tab="rapport";
+const pdjSum=()=>s.pdjList.reduce((t,a)=>t+(parseInt(a.pax)||0),0);
+function dateDuJour(){const [y,m,d]=repDate.split("-").map(Number);const t=new Date(y,m-1,d).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});return t.charAt(0).toUpperCase()+t.slice(1)}
+function buildPdj(){
+  const L=[dateDuJour(),""];
+  const rows=s.pdjList.filter(a=>a.room);
+  [...rows].sort((a,b)=>(parseFloat(a.room)||0)-(parseFloat(b.room)||0)).forEach(a=>L.push(`#${a.room} : ${parseInt(a.pax)||0} pax`));
+  if(!rows.length)L.push("/");
+  L.push("",`Total : ${pdjSum()} pax`);
+  return L.join("\n");
+}
+function renderPdjList(){
+  const box=$("pdjListBox");box.innerHTML="";
+  s.pdjList.forEach((a,i)=>{
+    const w=document.createElement("div");w.className="ast";
+    const r=document.createElement("div");r.className="line";
+    const sel=document.createElement("select");
+    sortRooms([...new Set([...rooms,a.room].filter(Boolean))]).forEach(n=>{const o=document.createElement("option");o.textContent=n;if(n===a.room)o.selected=true;sel.appendChild(o)});
+    sel.onchange=()=>{a.room=sel.value;commit()};
+    const p=document.createElement("input");p.type="number";p.min="0";p.inputMode="numeric";p.value=a.pax;p.placeholder="pax";
+    p.oninput=()=>{a.pax=p.value;commit()};
+    const x=document.createElement("button");x.className="x";x.textContent="×";x.onclick=()=>{s.pdjList.splice(i,1);renderPdjList();commit()};
+    r.append("#",sel,p,"pax",x);w.appendChild(r);box.appendChild(w);
+  });
+}
+function showTab(t){
+  tab=t==="pdj"?"pdj":"rapport";
+  $("tab-rapport").classList.toggle("hidden",tab!=="rapport");
+  $("tab-pdj").classList.toggle("hidden",tab!=="pdj");
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
+  try{history.replaceState(null,"",location.pathname+location.search+(tab==="pdj"?"#pdj":""))}catch(e){}
+  refresh();
+}
+
 /* ---------- texte du rapport ---------- */
 const paren=n=>n&&n.trim()?` (${n.trim()})`:"";
 function roomsFr(a){const l=sortRooms(a);if(!l.length)return"/";if(l.length===1)return l[0];return l.slice(0,-1).join(", ")+" et "+l[l.length-1]}
@@ -341,7 +402,8 @@ function build(){
 }
 function refresh(){
   const t=build();$("preview").textContent=t;
-  $("wa").href="https://api.whatsapp.com/send?text="+encodeURIComponent(t);
+  const pt=buildPdj();$("pdjPreview").textContent=pt;$("pdjTotal").textContent=pdjSum()+" pax";
+  $("wa").href="https://api.whatsapp.com/send?text="+encodeURIComponent(tab==="pdj"?pt:t);
   refreshOrder();
 }
 
@@ -395,12 +457,13 @@ function urlPatch(){
   p.mab=nums(q.get("mab"));p.arr=nums(q.get("arr"));p.rec=nums(q.get("rec"));
   p.pdjPax=String(parseInt(q.get("pdj"))||"");
   p.pdjTables=(q.get("tables")||"").split("|").map(x=>x.trim()).filter(Boolean).join("\n");
+  p.pdjList=q.has("pdjch")?String(q.get("pdjch")||"").split(/[,;]/).map(x=>x.match(/(\d+)\s*:\s*(\d+)/)).filter(Boolean).map(m=>({room:m[1],pax:m[2]})):null;
   history.replaceState(null,"",location.pathname);
   return p;
 }
 function applyPatch(base,p){
   const ns=clean(base);
-  ns.ast=p.ast;ns.mab=p.mab;ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};
+  ns.ast=p.ast;ns.mab=p.mab;ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};if(p.pdjList)ns.pdjList=p.pdjList;
   return ns;
 }
 
@@ -452,8 +515,8 @@ function claudePrompt(){
 `- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier de la fiche) de chaque chambre occupée et compte les lignes « Petit-déjeuner » (les observations ne suffisent pas). Une table par chambre (ex. « 1 table de 3, 1 table de 2 »).`,
 `Règles : ne modifie rien. Ferme une fiche en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Pour sortir d'un dossier, clique QUITTER. Laisse l'onglet Asterio ouvert à la fin.`,
 ``,
-`3. Envoie le rapport dans mon app : ouvre dans ton groupe cette adresse en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte, numéros séparés par des virgules, rien après le = s'il n'y a rien, + à la place des espaces) :`,
-`${APP_URL}?r=1&ast=3:2,5:2&mab=3&arr=2,9&rec=5&pdj=4&tables=2+tables+de+2`,
+`3. Envoie le rapport dans mon app : ouvre dans ton groupe cette adresse en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte, et dans pdjch chambre:nombre de petits-déjeuners de chaque chambre ; numéros séparés par des virgules, rien après le = s'il n'y a rien, + à la place des espaces) :`,
+`${APP_URL}?r=1&ast=3:2,5:2&mab=3&arr=2,9&rec=5&pdj=4&pdjch=3:2,5:2&tables=2+tables+de+2`,
 `Attends que la page affiche « Envoyé au téléphone ✓ » sous le titre, puis ferme cet onglet (garde celui d'Asterio).`,
 ``,
 `4. Réponds-moi en quelques lignes : le rapport, et les points à vérifier.`
@@ -463,9 +526,11 @@ function claudePrompt(){
 /* ---------- événements ---------- */
 const setClaudeLink=()=>{$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt())};
 $("repDate").value=repDate;setClaudeLink();
-$("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();setClaudeLink()};
+$("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();setClaudeLink();refresh()};
 /* la demande est aussi copiée, au cas où Claude s'ouvrirait vide */
 $("claudeBtn").addEventListener("click",()=>{try{navigator.clipboard.writeText(claudePrompt()).catch(()=>{})}catch(e){}});
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+$("pdjAdd").onclick=()=>{s.pdjList.push({room:rooms[0]||"",pax:"2"});renderPdjList();commit()};
 $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1",note:""});renderAst();commit()};
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();commit();toast("Chambres mises à jour")}};
 $("orderCopy").onclick=async()=>{const t=buildOrder();if(!t){toast("Pas de PDJ : rien à commander");return}
@@ -474,8 +539,8 @@ $("orderWa").addEventListener("click",e=>{if(!buildOrder()){e.preventDefault();t
 $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
   if(!ns){toast("Format non reconnu");return}
   s=ns;$("pasteArea").value="";renderAll();commit();toast("Rapport importé ✓")};
-$("copy").onclick=async()=>{try{await navigator.clipboard.writeText(build());toast("Copié ✓")}catch(e){
-  const r=document.createRange();r.selectNodeContents($("preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
+$("copy").onclick=async()=>{const txt=tab==="pdj"?buildPdj():build();try{await navigator.clipboard.writeText(txt);toast("Copié ✓")}catch(e){
+  const r=document.createRange();r.selectNodeContents($(tab==="pdj"?"pdjPreview":"preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
 $("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes,kt=s.orderTime;s=blank();s.notes=keep;s.orderTime=kt;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();commit();toast("Rapport vidé (précisions gardées)")}
   else{$("reset").dataset.c="1";$("reset").textContent="Confirmer ?";setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport"},3000)}};
 
@@ -492,9 +557,10 @@ if(patch){
     push({fromClaude:updated}).then(()=>setSync("☁️ Envoyé au téléphone ✓"));
   });
 }else{renderAll();startSync()}
+showTab(location.hash==="#pdj"?"pdj":"rapport");
 
 /* pour les tests */
-window.__rapport={parseReport,build,buildOrder,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
+window.__rapport={parseReport,build,buildOrder,buildPdj,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
