@@ -2,200 +2,294 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Rapport shift">
-<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#EDF1EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111814" media="(prefers-color-scheme: dark)">
 <title>Rapport de shift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#f4f5f7;--card:#fff;--ink:#16181d;--muted:#6b7280;--line:#e5e7eb;
-    --acc:#2563eb;--acc-soft:#e0e9ff;--wa:#1faa59;--warn:#d97706;--todo:#dc2626;--ok:#16a34a;--cl:#d97757;
-  }
-  @media (prefers-color-scheme:dark){
-    :root{--bg:#0f1115;--card:#181b21;--ink:#eef0f3;--muted:#9aa1ad;--line:#2a2f38;--acc:#5b8cff;--acc-soft:#1e2a4a}
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html,body,button,a,input,select,textarea{touch-action:manipulation}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:16px 14px 120px;max-width:640px;margin:0 auto}
-  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-  h1{font-size:22px;font-weight:700}
-  .date{color:var(--muted);font-size:13px}
-  .sync{font-size:12px;color:var(--muted);margin-top:2px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
-  .card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:600}
-  .task{padding:8px 0;border-top:1px solid var(--line)}
-  .task:first-of-type{border-top:none;padding-top:0}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .lbl{font-size:15px;font-weight:500}
-  .seg{display:flex;background:var(--bg);border-radius:9px;padding:3px;gap:2px;flex-shrink:0}
-  .seg button{border:none;background:none;color:var(--muted);font-size:13px;padding:6px 9px;border-radius:7px;cursor:pointer;font-weight:500}
-  .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
-  .seg button.on[data-v="A voir"]{color:var(--warn)}
-  .seg button.on[data-v="A faire"]{color:var(--todo)}
-  .seg button.on[data-v="Fait"]{color:var(--ok)}
-  input[type=text],input[type=number],input[type=date],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px}
-  input.small{font-size:16px;padding:6px 9px;margin-top:6px;background:transparent}
-  textarea{min-height:80px;resize:vertical}
-  textarea.big{min-height:200px;font-size:16px}
-  .sub{font-size:13px;color:var(--muted);margin:12px 0 6px}
-  .sub:first-of-type{margin-top:0}
-  .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;font-weight:600;min-width:42px;height:38px;border-radius:9px;cursor:pointer}
-  .chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
-  .ast{margin-bottom:10px}
-  .ast .line{display:flex;gap:8px;align-items:center}
-  .ast select{flex:1;font:inherit;font-size:16px;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
-  .ast input[type=number]{width:80px}
-  .x{border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 6px}
-  .add{border:1px dashed var(--line);background:none;color:var(--acc);font:inherit;font-size:14px;font-weight:600;padding:9px;border-radius:9px;width:100%;cursor:pointer}
-  .two{display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:start}
-  .clrow{display:grid;grid-template-columns:1fr 140px;gap:8px;align-items:center}
-  pre{white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.5;background:var(--bg);border-radius:9px;padding:12px}
-  .bar{position:fixed;left:0;right:0;bottom:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line);display:flex;gap:8px;justify-content:center}
-  .bar>*{flex:1;max-width:300px}
-  .btn{border:none;border-radius:11px;font:inherit;font-weight:600;font-size:15px;padding:13px;cursor:pointer;text-align:center;text-decoration:none;display:block}
-  .copy{background:var(--acc-soft);color:var(--acc)}
-  .wa{background:var(--wa);color:#fff}
-  .cl{background:var(--cl);color:#fff}
-  .note{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
-  .orow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
-  .orow:first-child{border-top:none}
-  .orow .lbl{flex:1;font-size:14px}
-  .orow input{width:70px;text-align:center}
-  .auto{border:none;background:none;color:var(--acc);font:inherit;font-size:12px;cursor:pointer;min-width:34px}
-  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:12px;position:sticky;top:8px;z-index:5}
-  .tabs button{border:none;background:none;color:var(--muted);font:inherit;font-size:14px;font-weight:600;padding:9px;border-radius:9px;cursor:pointer}
-  .tabs button.on{background:var(--acc);color:#fff}
-  .hidden{display:none}
-  .ptotal{display:flex;justify-content:space-between;font-weight:700;font-size:16px;padding:10px 2px 0;border-top:1px solid var(--line);margin-top:6px}
-  .print{background:var(--card);color:var(--ink);border:1px solid var(--line)}
-  #printArea{display:none}
-  @media print{
-    body{background:#fff;color:#000;padding:0;max-width:none}
-    body>*:not(#printArea){display:none!important}
-    #printArea{display:block;white-space:pre-wrap;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13pt;line-height:1.45;color:#000}
-    #printArea.big{font-size:20pt;line-height:1.6}
-    @page{margin:14mm}
-  }
-  .ghost{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;text-decoration:underline}
-  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:20px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:10;max-width:90vw;text-align:center}
-  .toast.show{opacity:1}
-  .banner{background:var(--ok);color:#fff;border-radius:11px;padding:10px 12px;font-weight:600;font-size:14px;margin-bottom:12px;display:none}
-  .banner.show{display:block}
-  details summary{cursor:pointer;color:var(--muted);font-size:13px}
+/* Barbizon, la nuit : vert sous-bois, pierre de Fontainebleau, lanterne.
+   Police Atkinson Hyperlegible : faite pour être lue vite, même fatigué. */
+:root{
+  --page:#EDF1EC;      /* pierre claire */
+  --sheet:#FFFFFF;
+  --ink:#17201B;
+  --soft:#5E6B63;
+  --line:#D8DFD9;
+  --bois:#244534;      /* vert sous-bois : couleur principale */
+  --bois-pale:#E1EBE3;
+  --lanterne:#B87814;  /* A voir */
+  --brique:#B3432C;    /* A faire */
+  --mousse:#2F7A4A;    /* Fait */
+  --wa:#1E9E55;
+  --r:14px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{--page:#111814;--sheet:#18211C;--ink:#E5ECE7;--soft:#97A69C;--line:#2A362F;--bois:#8DBB9C;--bois-pale:#22332A;--lanterne:#E0A23A;--brique:#E07A62;--mousse:#6CC18A}
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,button,a,input,select,textarea{touch-action:manipulation}
+body{font-family:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--page);color:var(--ink);
+  font-size:16px;line-height:1.4;padding:0 0 calc(96px + var(--safe-b));-webkit-font-smoothing:antialiased}
+.wrap{max-width:620px;margin:0 auto;padding:0 14px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--bois);outline-offset:2px}
+
+/* ---- en-tête + onglets (collés en haut) ---- */
+.top{position:sticky;top:0;z-index:20;background:var(--page);padding:calc(10px + env(safe-area-inset-top,0px)) 0 10px;border-bottom:1px solid var(--line)}
+.head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.head>div{min-width:0}
+.head h1{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.meta{display:flex;align-items:center;gap:6px;color:var(--soft);font-size:14px;margin-top:1px;white-space:nowrap}
+.meta .dot{margin-left:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--soft);flex:none}
+.dot.ok{background:var(--mousse)}.dot.err{background:var(--brique)}
+.reset{border:1px solid var(--line);background:var(--sheet);border-radius:999px;padding:7px 12px;font-size:14px;color:var(--soft);white-space:nowrap;flex:none}
+.reset.armed{border-color:var(--brique);color:var(--brique);font-weight:700}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--bois-pale);border-radius:12px;padding:3px}
+.tabs button{border:none;background:none;padding:9px 4px;border-radius:9px;font-size:15px;font-weight:700;color:var(--soft)}
+.tabs button.on{background:var(--sheet);color:var(--bois);box-shadow:0 1px 2px rgba(23,32,27,.12)}
+@media (prefers-color-scheme:dark){.tabs button.on{color:var(--ink)}}
+
+/* ---- sections : listes groupées, pas de cartes empilées ---- */
+.sec{margin-top:22px}
+.sec>h2{font-size:17px;font-weight:700;margin:0 4px 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sec>h2 small{font-size:14px;font-weight:400;color:var(--soft)}
+.group{background:var(--sheet);border-radius:var(--r);border:1px solid var(--line);overflow:hidden}
+.item{padding:11px 14px;border-top:1px solid var(--line)}
+.item:first-child{border-top:none}
+.line{display:flex;align-items:center;gap:10px;min-height:36px}
+.name{flex:1;min-width:0;font-weight:700}
+.hint{color:var(--soft);font-size:14px}
+.empty{padding:14px;color:var(--soft)}
+
+/* statut des tâches : une seule couleur par état */
+.st{display:flex;background:var(--page);border-radius:10px;padding:3px;gap:2px;flex:none}
+.st button{border:none;background:none;border-radius:8px;padding:7px 9px;font-size:14px;color:var(--soft);min-width:34px}
+.st button.on{color:#fff;font-weight:700}
+.st button.on[data-v="/"]{background:var(--line);color:var(--ink)}
+.st button.on[data-v="A voir"]{background:var(--lanterne)}
+.st button.on[data-v="A faire"]{background:var(--brique)}
+.st button.on[data-v="Fait"]{background:var(--mousse)}
+
+/* précision repliée : « + précision » ouvre le champ */
+.addnote{border:none;background:none;color:var(--soft);font-size:14px;padding:4px 0 0;font-weight:400}
+input[type=text],input[type=number],input[type=date],textarea,select{font:inherit;font-size:16px;color:var(--ink);background:var(--page);
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{min-height:90px;resize:vertical;line-height:1.45}
+.note-in{margin-top:8px}
+textarea.long{min-height:220px;font-size:16px}
+
+/* plaques de chambre : numéros ronds comme sur les portes */
+.plates{display:flex;flex-wrap:wrap;gap:8px}
+.plate{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--sheet);font-size:17px;font-weight:700;
+  font-variant-numeric:tabular-nums;color:var(--ink)}
+.plate.on{background:var(--bois);border-color:var(--bois);color:var(--sheet)}
+@media (prefers-color-scheme:dark){.plate.on{color:#0E1611}}
+.plate-label{font-weight:700;margin-bottom:8px}
+
+/* chambre + pax : plaque, compteur, retirer */
+.roomrow{display:flex;align-items:center;gap:10px}
+.roomrow select{width:auto;flex:none;font-weight:700;padding:9px 10px;background:var(--bois-pale);border-color:transparent;color:var(--bois)}
+@media (prefers-color-scheme:dark){.roomrow select{color:var(--ink)}}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.step button{border:none;background:var(--page);width:38px;height:38px;font-size:20px;font-weight:700;color:var(--bois)}
+.step input{width:46px;border:none;border-radius:0;text-align:center;font-weight:700;padding:8px 0;background:var(--sheet);-moz-appearance:textfield}
+.step input::-webkit-inner-spin-button{-webkit-appearance:none}
+.unit{color:var(--soft)}
+.del{border:none;background:none;color:var(--soft);font-size:22px;width:34px;height:34px;margin-left:auto}
+.addrow{display:block;width:100%;border:none;background:none;padding:13px 14px;text-align:left;color:var(--bois);font-weight:700;border-top:1px solid var(--line)}
+.group .addrow:first-child{border-top:none}
+
+/* total du petit-déjeuner */
+.total{display:flex;justify-content:space-between;align-items:baseline;padding:14px;border-top:2px solid var(--bois);font-weight:700}
+.total b{font-size:28px;font-variant-numeric:tabular-nums;color:var(--bois)}
+
+/* bandeau Claude */
+.claude{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:14px}
+.claude a{display:block;text-align:center;text-decoration:none;background:var(--bois);color:var(--sheet);font-weight:700;border-radius:12px;padding:13px 10px}
+@media (prefers-color-scheme:dark){.claude a{color:#0E1611}}
+.claude input{width:150px}
+.claude p{grid-column:1/-1;color:var(--soft);font-size:14px;margin:0 4px}
+.banner{display:none;margin-top:12px;background:var(--mousse);color:#fff;border-radius:12px;padding:11px 14px;font-weight:700}
+.banner.show{display:block}
+
+/* aperçu : le message tel qu'il partira */
+pre{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:15px;line-height:1.5;padding:14px}
+details>summary{list-style:none;padding:13px 14px;color:var(--bois);font-weight:700;cursor:pointer}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:" +";}
+details[open]>summary::after{content:" –"}
+.inner{padding:0 14px 14px}
+.btn{display:block;width:100%;border:none;border-radius:12px;padding:13px;font-weight:700;text-align:center;text-decoration:none}
+.btn.ghost{background:var(--bois-pale);color:var(--bois)}
+
+/* barre d'actions en bas */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--sheet);border-top:1px solid var(--line);padding:10px 14px calc(10px + var(--safe-b))}
+.bar .wrap{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px;padding:0}
+.bar button,.bar a{border:none;border-radius:12px;padding:13px 6px;font-weight:700;font-size:15px;text-align:center;text-decoration:none}
+.bar .b-copy,.bar .b-print{background:var(--bois-pale);color:var(--bois)}
+.bar .b-wa{background:var(--wa);color:#fff}
+@media (prefers-color-scheme:dark){.bar .b-copy,.bar .b-print{color:var(--ink)}}
+
+.toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translate(-50%,10px);background:var(--ink);color:var(--page);padding:10px 16px;border-radius:999px;
+  font-size:15px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+.hidden{display:none!important}
+
+/* impression (ordinateur) */
+#printArea{display:none}
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block;white-space:pre-wrap;font-family:"Atkinson Hyperlegible",sans-serif;font-size:13pt;line-height:1.45;color:#000}
+  #printArea.big{font-size:20pt;line-height:1.6}
+  @page{margin:14mm}
+}
 </style>
 </head>
 <body>
-<header>
-  <div><h1>Rapport de shift</h1><div class="date" id="date"></div><div class="sync" id="sync">☁️ Connexion…</div></div>
-  <button class="ghost" id="reset">Nouveau rapport</button>
-</header>
-
-<div class="banner" id="banner">✅ Rapport reçu de Claude</div>
-
-<div class="card">
-  <div class="clrow">
-    <a class="btn cl" id="claudeBtn" href="https://claude.ai/new" target="_blank" rel="noopener">🤖 Faire le rapport avec Claude</a>
-    <input type="date" id="repDate" aria-label="Soir du rapport">
+<div class="top">
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h1>Rapport de shift</h1>
+        <div class="meta"><span id="date"></span><span class="dot" id="syncDot"></span><span id="sync">Connexion…</span></div>
+      </div>
+      <button class="reset" id="reset">Nouveau rapport</button>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="rapport">Rapport</button>
+      <button data-tab="pdj">Petit-déj</button>
+      <button data-tab="commande">Commande</button>
+    </nav>
   </div>
-  <p class="note">Claude s'ouvre avec la demande déjà écrite : appuie sur Envoyer. Il lit Asterio sur le Mac et <b>le rapport arrive tout seul ici</b>. Il ne te reste qu'à compléter le reste.</p>
 </div>
 
-<nav class="tabs" id="tabs">
-  <button data-tab="rapport">📝 Rapport</button>
-  <button data-tab="pdj">☕ Petit-déj</button>
-</nav>
+<main class="wrap">
+<div class="banner" id="banner">Rapport reçu de Claude ✓</div>
 
+<!-- ========== RAPPORT ========== -->
 <div id="tab-rapport">
-<div class="card">
-  <h2>Tâches</h2>
-  <div id="tasks"></div>
-</div>
-
-<div class="card">
-  <h2>Info astreinte</h2>
-  <div id="astList"></div>
-  <button class="add" id="astAdd">+ Ajouter une chambre</button>
-</div>
-
-<div class="card">
-  <h2>Nettoyage</h2>
-  <input type="text" id="netNote" placeholder="Info ménage (ex. Lydie vient vers 12h30)">
-  <div class="sub">MÀB</div><div class="chips" data-group="mab"></div>
-  <input type="text" class="small" id="mabNote" placeholder="précision (ex. laisser le canapé lit dans la 4)">
-  <div class="sub">Arrivées</div><div class="chips" data-group="arr"></div>
-  <input type="text" class="small" id="arrNote" placeholder="précision (optionnel)">
-  <div class="sub">Recouche</div><div class="chips" data-group="rec"></div>
-  <input type="text" class="small" id="recNote" placeholder="précision (optionnel)">
-</div>
-
-<div class="card">
-  <h2>Petit-déjeuner</h2>
-  <div class="two">
-    <input type="number" id="pdjPax" min="0" placeholder="Pax" inputmode="numeric">
-    <textarea id="pdjTables" placeholder="Une ligne par table, ex. :&#10;4 tables de 2 (dont la #3 en chambre vers 9h30)&#10;1 table de 4 (la #8 avec 2 pax extérieur) vers 9h00"></textarea>
+  <div class="claude">
+    <a id="claudeBtn" href="https://claude.ai/new" target="_blank" rel="noopener">Remplir avec Claude</a>
+    <input type="date" id="repDate" aria-label="Soir du rapport">
+    <p>Claude lit Asterio sur le Mac et remplit l'astreinte, le nettoyage et le petit-déjeuner.</p>
   </div>
+
+  <section class="sec">
+    <h2>Tâches</h2>
+    <div class="group" id="tasks"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Astreinte <small>chambres occupées cette nuit</small></h2>
+    <div class="group">
+      <div id="astList"></div>
+      <button class="addrow" id="astAdd">+ Ajouter une chambre</button>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Nettoyage <small>pour demain</small></h2>
+    <div class="group">
+      <div class="item"><input type="text" id="netNote" placeholder="Info ménage, ex. Lydie vient vers 12h30"></div>
+      <div class="item"><div class="plate-label">MÀB</div><div class="plates" data-group="mab"></div><div class="notebox" data-note="mabNote" data-ph="ex. laisser le canapé lit dans la 4"></div></div>
+      <div class="item"><div class="plate-label">Arrivées</div><div class="plates" data-group="arr"></div><div class="notebox" data-note="arrNote" data-ph="précision"></div></div>
+      <div class="item"><div class="plate-label">Recouche</div><div class="plates" data-group="rec"></div><div class="notebox" data-note="recNote" data-ph="précision"></div></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Petit-déjeuner <small>demain matin</small></h2>
+    <div class="group">
+      <div class="item"><div class="line"><span class="name">Nombre de pax</span>
+        <div class="step"><button type="button" data-step="-1" aria-label="moins">−</button><input type="number" id="pdjPax" min="0" inputmode="numeric" placeholder="0"><button type="button" data-step="1" aria-label="plus">+</button></div></div></div>
+      <div class="item"><textarea id="pdjTables" placeholder="Une ligne par table, ex. :&#10;4 tables de 2 (dont la #3 en chambre vers 9h30)&#10;1 table de 4 vers 9h00"></textarea></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Précisions</h2>
+    <div class="group">
+      <div class="item"><div class="plate-label">Destripage <span class="hint">chambres manquantes</span></div><div class="plates" data-group="strip"></div></div>
+      <div class="item"><textarea id="notes" class="long" placeholder="- La #3 partira à 14h00 maximum"></textarea>
+        <div class="hint" style="margin-top:6px">Envoyé tel quel. Gardé quand tu fais « Nouveau rapport ».</div></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Message</h2>
+    <div class="group">
+      <pre id="preview"></pre>
+      <details style="border-top:1px solid var(--line)">
+        <summary>Importer un rapport texte</summary>
+        <div class="inner"><textarea id="pasteArea" placeholder="Colle ici un rapport complet"></textarea>
+          <button class="btn ghost" id="importBtn" style="margin-top:8px">Importer</button></div>
+      </details>
+      <details style="border-top:1px solid var(--line)">
+        <summary>Numéros des chambres</summary>
+        <div class="inner"><input type="text" id="roomsCfg" placeholder="1,2,3,4,5,6,7,8,9,10"></div>
+      </details>
+    </div>
+  </section>
 </div>
 
-<div class="card">
-  <h2>🥐 Commande boulangerie (PDJ du lendemain)</h2>
-  <div id="orderList"></div>
-  <div class="row" style="margin-top:8px"><span class="lbl">Heure de livraison</span><input type="text" id="orderTime" style="max-width:110px" placeholder="7h30"></div>
-  <pre id="orderPreview" style="margin-top:10px"></pre>
-  <div class="two" style="grid-template-columns:1fr 1fr;margin-top:10px">
-    <button class="btn copy" id="orderCopy">Copier</button>
-    <a class="btn wa" id="orderWa" href="#" target="_blank" rel="noopener">WhatsApp</a>
-  </div>
-  <button class="btn print" id="orderPrint" style="margin-top:8px;width:100%">🖨️ Imprimer la commande</button>
-  <p class="note">Calcul automatique avec les pax du PDJ. Tu peux changer un chiffre à la main ; « auto » remet le calcul.</p>
-</div>
-
-<div class="card">
-  <h2>Précisions</h2>
-  <div class="sub">Destripage — chambres manquantes</div><div class="chips" data-group="strip"></div>
-  <div class="sub">Texte des précisions (envoyé tel quel, gardé au nouveau rapport)</div>
-  <textarea id="notes" class="big" placeholder="- La #3 partira à 14h00 maximum&#10;&#10;Point sur les chauffages :&#10;* …"></textarea>
-</div>
-
-<div class="card">
-  <h2>Aperçu</h2>
-  <pre id="preview"></pre>
-  <details style="margin-top:12px">
-    <summary>Importer un rapport texte (secours)</summary>
-    <textarea id="pasteArea" style="margin-top:8px" placeholder="Colle ici un rapport complet"></textarea>
-    <button class="btn copy" id="importBtn" style="margin-top:8px;width:100%">Importer</button>
-  </details>
-  <details style="margin-top:12px">
-    <summary>Réglages : numéros des chambres</summary>
-    <input type="text" id="roomsCfg" style="margin-top:8px" placeholder="1,2,3,4,5,6,7,8,9,10">
-  </details>
-</div>
-</div>
-
+<!-- ========== PETIT-DÉJ ========== -->
 <div id="tab-pdj" class="hidden">
-<div class="card">
-  <h2>Personnes au petit-déjeuner (demain matin)</h2>
-  <div id="pdjListBox"></div>
-  <button class="add" id="pdjAdd">+ Ajouter une chambre</button>
-  <div class="ptotal"><span>Total</span><span id="pdjTotal">0 pax</span></div>
-  <div class="sub">Ou colle une liste ici (ex. « #3 : 2 pax », une chambre par ligne)</div>
-  <textarea id="pdjPaste" placeholder="#2 : 2 pax&#10;#3 : 2 pax&#10;#8 : 4 pax"></textarea>
-  <button class="btn copy" id="pdjPasteBtn" style="margin-top:8px;width:100%">Remplir la liste</button>
-</div>
-<div class="card">
-  <h2>Aperçu</h2>
-  <pre id="pdjPreview"></pre>
-</div>
+  <section class="sec">
+    <h2>Pour demain matin <small id="pdjDateLbl"></small></h2>
+    <div class="group">
+      <div id="pdjListBox"></div>
+      <button class="addrow" id="pdjAdd">+ Ajouter une chambre</button>
+      <div class="total"><span>Total</span><b id="pdjTotal">0</b></div>
+    </div>
+  </section>
+  <section class="sec">
+    <div class="group">
+      <details>
+        <summary>Coller une liste</summary>
+        <div class="inner"><textarea id="pdjPaste" placeholder="#2 : 2 pax&#10;#3 : 2 pax&#10;#8 : 4 pax"></textarea>
+          <button class="btn ghost" id="pdjPasteBtn" style="margin-top:8px">Remplir la liste</button></div>
+      </details>
+    </div>
+  </section>
+  <section class="sec">
+    <h2>Message</h2>
+    <div class="group"><pre id="pdjPreview"></pre></div>
+  </section>
 </div>
 
-<div class="bar">
-  <button class="btn copy" id="copy">Copier</button>
-  <button class="btn print" id="printBtn" style="flex:0 0 auto;padding:13px 16px">🖨️ Imprimer</button>
-  <a class="btn wa" id="wa" href="#" target="_blank" rel="noopener">Envoyer sur WhatsApp</a>
+<!-- ========== COMMANDE ========== -->
+<div id="tab-commande" class="hidden">
+  <section class="sec">
+    <h2>Boulangerie <small id="orderPaxLbl"></small></h2>
+    <div class="group">
+      <div id="orderList"></div>
+      <div class="item"><div class="line"><span class="name">Livraison à</span><input type="text" id="orderTime" style="max-width:110px;text-align:center" placeholder="7h30"></div></div>
+    </div>
+  </section>
+  <section class="sec">
+    <h2>Message</h2>
+    <div class="group"><pre id="orderPreview"></pre></div>
+  </section>
 </div>
-<div class="toast" id="toast"></div>
+</main>
+
+<div class="bar"><div class="wrap">
+  <button class="b-copy" id="copy">Copier</button>
+  <button class="b-print" id="printBtn">Imprimer</button>
+  <a class="b-wa" id="wa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+</div></div>
+<div class="toast" id="toast" role="status"></div>
 <div id="printArea"></div>
 
 <script type="module">
@@ -259,62 +353,92 @@ const DEFAULTS_KEY="rapportShift_defaults_v2";
 function applyDefaultsOnce(){
   try{if(localStorage.getItem(DEFAULTS_KEY))return false;localStorage.setItem(DEFAULTS_KEY,"1")}catch(e){return false}
   /* remplace le pré-remplissage de la version précédente (« La #3… » seul) par le texte complet */
-  if(!s.notes.trim()||["la #3 partira a 14h00 maximum","- la #3 partira a 14h00 maximum"].includes(norm(s.notes))){s.notes=DEFAULT_NOTES;updated=Date.now();saveLocal();return true}
+  if(!s.notes.trim()||["la #3 partira a 14h00 maximum","- la #3 partira a 14h00 maximum"].includes(norm(s.notes))){s.notes=DEFAULT_NOTES;saveLocal();return true}
   return false;
 }
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){if(d.rooms)rooms=arr(d.rooms).map(String);if(d.s)s=clean(Object.assign({},d.s,{perm:d.perm}));updated=d.updated||0}}catch(e){}}
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({rooms,s,updated}))}catch(e){}}
 
+/* ---------- composants ---------- */
+const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e};
+/* précision repliée : « + précision » tant qu'elle est vide */
+function noteField(value,ph,onInput){
+  const box=el("div");
+  const input=el("input","note-in");input.type="text";input.placeholder=ph||"précision";input.value=value||"";
+  input.oninput=()=>onInput(input.value);
+  const btn=el("button","addnote","+ précision");btn.type="button";
+  btn.onclick=()=>{btn.classList.add("hidden");input.classList.remove("hidden");input.focus()};
+  if(value&&value.trim())btn.classList.add("hidden");else input.classList.add("hidden");
+  box.append(btn,input);return box;
+}
+/* compteur − n + */
+function stepper(value,onChange){
+  const w=el("div","step");
+  const minus=el("button",null,"−"),plus=el("button",null,"+");minus.type=plus.type="button";
+  minus.setAttribute("aria-label","moins");plus.setAttribute("aria-label","plus");
+  const i=el("input");i.type="number";i.min="0";i.inputMode="numeric";i.value=value;i.placeholder="0";
+  const set=v=>{i.value=Math.max(0,v);onChange(i.value)};
+  minus.onclick=()=>set((parseInt(i.value)||0)-1);plus.onclick=()=>set((parseInt(i.value)||0)+1);
+  i.oninput=()=>onChange(i.value);
+  w.append(minus,i,plus);return w;
+}
+function roomSelect(value,onChange){
+  const sel=el("select");sel.setAttribute("aria-label","Chambre");
+  sortRooms([...new Set([...rooms,value].filter(Boolean))]).forEach(n=>{const o=el("option",null,"#"+n);o.value=n;if(n===value)o.selected=true;sel.appendChild(o)});
+  sel.onchange=()=>onChange(sel.value);return sel;
+}
+
 /* ---------- rendu ---------- */
 function renderTasks(){
-  $("tasks").innerHTML="";
+  const box=$("tasks");box.innerHTML="";
   TASKS.forEach(t=>{
-    const w=document.createElement("div");w.className="task";
-    const r=document.createElement("div");r.className="row";
-    const l=document.createElement("span");l.className="lbl";l.textContent=t;r.appendChild(l);
-    const seg=document.createElement("div");seg.className="seg";
-    STATES.forEach(v=>{const b=document.createElement("button");b.textContent=v;b.dataset.v=v;
-      if(s.tasks[t]===v)b.className="on";
-      b.onclick=()=>{s.tasks[t]=v;renderTasks();commit()};seg.appendChild(b)});
-    r.appendChild(seg);w.appendChild(r);
-    const n=document.createElement("input");n.type="text";n.className="small";n.placeholder="précision (optionnel)";n.value=s.taskNotes[t]||"";
-    n.oninput=()=>{s.taskNotes[t]=n.value;commit()};w.appendChild(n);
-    $("tasks").appendChild(w);
+    const it=el("div","item");const line=el("div","line");
+    line.appendChild(el("span","name",t));
+    const st=el("div","st");
+    STATES.forEach(v=>{const b=el("button",s.tasks[t]===v?"on":"",v);b.type="button";b.dataset.v=v;
+      b.onclick=()=>{s.tasks[t]=v;renderTasks();commit()};st.appendChild(b)});
+    line.appendChild(st);it.appendChild(line);
+    it.appendChild(noteField(s.taskNotes[t],"précision",v=>{s.taskNotes[t]=v;commit()}));
+    box.appendChild(it);
   });
 }
 function renderChips(){
-  document.querySelectorAll(".chips").forEach(c=>{
+  document.querySelectorAll(".plates").forEach(c=>{
     const g=c.dataset.group;c.innerHTML="";
-    sortRooms([...new Set([...rooms,...s[g]])]).forEach(n=>{const b=document.createElement("button");b.className="chip"+(s[g].includes(n)?" on":"");b.textContent=n;
+    sortRooms([...new Set([...rooms,...s[g]])]).forEach(n=>{const b=el("button","plate"+(s[g].includes(n)?" on":""),n);b.type="button";
+      b.setAttribute("aria-pressed",s[g].includes(n));
       b.onclick=()=>{s[g]=s[g].includes(n)?s[g].filter(x=>x!==n):[...s[g],n];renderChips();commit()};c.appendChild(b)});
   });
+  document.querySelectorAll(".notebox").forEach(nb=>{const k=nb.dataset.note;nb.innerHTML="";
+    nb.appendChild(noteField(s[k],nb.dataset.ph,v=>{s[k]=v;commit()}))});
 }
 function renderAst(){
-  $("astList").innerHTML="";
+  const box=$("astList");box.innerHTML="";
+  if(!s.ast.length)box.appendChild(el("div","empty","Aucune chambre pour l'instant."));
   s.ast.forEach((a,i)=>{
-    const w=document.createElement("div");w.className="ast";
-    const r=document.createElement("div");r.className="line";
-    const sel=document.createElement("select");
-    sortRooms([...new Set([...rooms,a.room].filter(Boolean))]).forEach(n=>{const o=document.createElement("option");o.textContent=n;if(n===a.room)o.selected=true;sel.appendChild(o)});
-    sel.onchange=()=>{a.room=sel.value;commit()};
-    const p=document.createElement("input");p.type="number";p.min="0";p.inputMode="numeric";p.value=a.pax;p.placeholder="pax";
-    p.oninput=()=>{a.pax=p.value;commit()};
-    const x=document.createElement("button");x.className="x";x.textContent="×";x.onclick=()=>{s.ast.splice(i,1);renderAst();commit()};
-    r.append("#",sel,p,"pax",x);w.appendChild(r);
-    const n=document.createElement("input");n.type="text";n.className="small";n.placeholder="précision (ex. dont un enfant de 3 ans)";n.value=a.note||"";
-    n.oninput=()=>{a.note=n.value;commit()};w.appendChild(n);
-    $("astList").appendChild(w);
+    const it=el("div","item");const r=el("div","roomrow");
+    r.append(roomSelect(a.room,v=>{a.room=v;commit()}),stepper(a.pax,v=>{a.pax=v;commit()}),el("span","unit","pax"));
+    const x=el("button","del","×");x.type="button";x.setAttribute("aria-label","Retirer");x.onclick=()=>{s.ast.splice(i,1);renderAst();commit()};
+    r.appendChild(x);it.appendChild(r);
+    it.appendChild(noteField(a.note,"ex. dont un enfant de 3 ans",v=>{a.note=v;commit()}));
+    box.appendChild(it);
   });
 }
-const FIELDS=["netNote","mabNote","arrNote","recNote","pdjPax","pdjTables","notes"];
+const FIELDS=["netNote","pdjPax","pdjTables","notes"];
 function bindInputs(){
   FIELDS.forEach(k=>{if(document.activeElement!==$(k))$(k).value=s[k];$(k).oninput=()=>{s[k]=$(k).value;if(k==="pdjPax"){s.orderOv={};renderOrder()}commit()}});
+  if(document.activeElement!==$("orderTime"))$("orderTime").value=s.orderTime||"7h30";
   $("orderTime").oninput=()=>{s.orderTime=$("orderTime").value;commit()};
   $("roomsCfg").value=rooms.join(",");
 }
 function renderAll(){renderTasks();renderChips();renderAst();bindInputs();renderOrder();renderPdjList();refresh()}
 function toast(m){const e=$("toast");e.textContent=m;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2200)}
-function setSync(t){$("sync").textContent=t}
+/* état de la synchro : texte court + point de couleur */
+function setSync(t){
+  const ok=/Synchronis|Envoyé/.test(t),err=/⚠️/.test(t);
+  $("sync").textContent=t.replace(/^[^A-Za-zÀ-ÿ]+/u,"");
+  $("syncDot").className="dot"+(ok?" ok":err?" err":"");
+}
 
 /* ---------- commande boulangerie ---------- */
 const pl=(n,one,many)=>n>1?many:one;
@@ -340,27 +464,28 @@ function buildOrder(){
 function renderOrder(){
   const box=$("orderList");box.innerHTML="";
   const pax=pdjPaxNum();
+  $("orderPaxLbl").textContent=pax?`${pax} pax au petit-déjeuner`:"";
+  if(!pax){box.appendChild(el("div","empty","Pas de petit-déjeuner demain : indique le nombre de pax dans l'onglet Rapport."));return}
   PRODUCTS.forEach(p=>{
-    const r=document.createElement("div");r.className="orow";
-    const l=document.createElement("span");l.className="lbl";l.textContent=`${p.name}`;
-    const hint=document.createElement("span");hint.className="note";hint.style.margin="0";hint.textContent=p.rule;l.appendChild(document.createElement("br"));l.appendChild(hint);
-    const i=document.createElement("input");i.type="number";i.min="0";i.inputMode="numeric";i.value=pax?orderQty(p):"";
-    i.oninput=()=>{s.orderOv[p.k]=i.value;commit()};
-    const a=document.createElement("button");a.className="auto";a.textContent=s.orderOv[p.k]!==undefined?"auto":"";
-    a.onclick=()=>{delete s.orderOv[p.k];renderOrder();commit()};
-    r.append(l,i,a);box.appendChild(r);
+    const it=el("div","item");const line=el("div","line");
+    const nm=el("span","name");nm.appendChild(document.createTextNode(p.name));nm.appendChild(el("br"));
+    const auto=s.orderOv[p.k]===undefined;
+    nm.appendChild(el("span","hint",auto?p.rule:"modifié à la main"));
+    line.appendChild(nm);
+    line.appendChild(stepper(orderQty(p),v=>{s.orderOv[p.k]=v;commit()}));
+    if(!auto){const r=el("button","addnote","auto");r.type="button";r.style.padding="0 0 0 4px";r.onclick=()=>{delete s.orderOv[p.k];renderOrder();commit()};line.appendChild(r)}
+    it.appendChild(line);box.appendChild(it);
   });
-  if(document.activeElement!==$("orderTime"))$("orderTime").value=s.orderTime||"7h30";
 }
 function refreshOrder(){
   const t=buildOrder();
-  $("orderPreview").textContent=t||"Pas de PDJ demain → pas de commande.";
-  $("orderWa").href=t?"https://api.whatsapp.com/send?text="+encodeURIComponent(t):"#";
+  $("orderPreview").textContent=t||"Rien à commander tant qu'il n'y a pas de pax au petit-déjeuner.";
 }
 
 /* ---------- onglet Petit-déj : chambres + pax, total ---------- */
 let tab="rapport";
 const pdjSum=()=>s.pdjList.reduce((t,a)=>t+(parseInt(a.pax)||0),0);
+function courte(iso){const [y,m,d]=iso.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}
 function dateDuJour(){const [y,m,d]=repDate.split("-").map(Number);const t=new Date(y,m-1,d).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});return t.charAt(0).toUpperCase()+t.slice(1)}
 function buildPdj(){
   const L=[dateDuJour(),""];
@@ -372,16 +497,12 @@ function buildPdj(){
 }
 function renderPdjList(){
   const box=$("pdjListBox");box.innerHTML="";
+  if(!s.pdjList.length)box.appendChild(el("div","empty","Aucune chambre. Claude la remplit, ou ajoute-les ici."));
   s.pdjList.forEach((a,i)=>{
-    const w=document.createElement("div");w.className="ast";
-    const r=document.createElement("div");r.className="line";
-    const sel=document.createElement("select");
-    sortRooms([...new Set([...rooms,a.room].filter(Boolean))]).forEach(n=>{const o=document.createElement("option");o.textContent=n;if(n===a.room)o.selected=true;sel.appendChild(o)});
-    sel.onchange=()=>{a.room=sel.value;commit()};
-    const p=document.createElement("input");p.type="number";p.min="0";p.inputMode="numeric";p.value=a.pax;p.placeholder="pax";
-    p.oninput=()=>{a.pax=p.value;commit()};
-    const x=document.createElement("button");x.className="x";x.textContent="×";x.onclick=()=>{s.pdjList.splice(i,1);renderPdjList();commit()};
-    r.append("#",sel,p,"pax",x);w.appendChild(r);box.appendChild(w);
+    const it=el("div","item");const r=el("div","roomrow");
+    r.append(roomSelect(a.room,v=>{a.room=v;commit()}),stepper(a.pax,v=>{a.pax=v;commit()}),el("span","unit","pax"));
+    const x=el("button","del","×");x.type="button";x.setAttribute("aria-label","Retirer");x.onclick=()=>{s.pdjList.splice(i,1);renderPdjList();commit()};
+    r.appendChild(x);it.appendChild(r);box.appendChild(it);
   });
 }
 /* lit une liste collée : « #3 : 2 pax », « 3 : 2 », « Chambre 3 - 2 personnes »… (ignore la date et le total) */
@@ -394,12 +515,14 @@ function parsePdjList(txt){
   });
   return out;
 }
+
+const TABS=["rapport","pdj","commande"];
 function showTab(t){
-  tab=t==="pdj"?"pdj":"rapport";
-  $("tab-rapport").classList.toggle("hidden",tab!=="rapport");
-  $("tab-pdj").classList.toggle("hidden",tab!=="pdj");
-  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
-  try{history.replaceState(null,"",location.pathname+location.search+(tab==="pdj"?"#pdj":""))}catch(e){}
+  tab=TABS.includes(t)?t:"rapport";
+  TABS.forEach(x=>$("tab-"+x).classList.toggle("hidden",x!==tab));
+  document.querySelectorAll("#tabs button").forEach(b=>{b.classList.toggle("on",b.dataset.tab===tab);b.setAttribute("aria-selected",b.dataset.tab===tab)});
+  try{history.replaceState(null,"",location.pathname+location.search+(tab==="rapport"?"":"#"+tab))}catch(e){}
+  try{window.scrollTo(0,0)}catch(e){}
   refresh();
 }
 
@@ -426,11 +549,14 @@ function build(){
   L.push(...P,"","Bonne soirée à tous 😊");
   return L.join("\n");
 }
+const tabText=()=>tab==="pdj"?buildPdj():tab==="commande"?buildOrder():build();
 function refresh(){
-  const t=build();$("preview").textContent=t;
-  const pt=buildPdj();$("pdjPreview").textContent=pt;$("pdjTotal").textContent=pdjSum()+" pax";
-  $("wa").href="https://api.whatsapp.com/send?text="+encodeURIComponent(tab==="pdj"?pt:t);
+  $("preview").textContent=build();
+  $("pdjPreview").textContent=buildPdj();$("pdjTotal").textContent=pdjSum();
+  $("pdjDateLbl").textContent=courte(repDate);
   refreshOrder();
+  const t=tabText();
+  $("wa").href=t?"https://api.whatsapp.com/send?text="+encodeURIComponent(t):"#";
 }
 
 /* ---------- sauvegarde + synchro Firebase ---------- */
@@ -462,7 +588,8 @@ function startSync(onReady){
     onValue(dbRef,snap=>{
       const r=snap.val();const ru=(r&&r.updated)||0;
       if(first){first=false;syncReady=true;
-        if(!updated&&JSON.stringify(s)!==JSON.stringify(blank())){updated=Date.now();saveLocal()}
+        const pristine=[blank(),Object.assign(blank(),{notes:DEFAULT_NOTES})].some(b=>JSON.stringify(b)===JSON.stringify(s));
+        if(!updated&&!pristine){updated=Date.now();saveLocal()}
         if(onReady)onReady(r);
         else if(!r||updated>ru)push();
         else{if(ru!==updated)applyRemote(r);setSync("☁️ Synchronisé")}
@@ -560,11 +687,10 @@ $("pdjPasteBtn").onclick=()=>{const rows=parsePdjList($("pdjPaste").value);
   if(!rows.length){toast("Aucune chambre trouvée dans le texte");return}
   s.pdjList=rows;$("pdjPaste").value="";renderPdjList();commit();toast(`${rows.length} chambre${rows.length>1?"s":""} ajoutée${rows.length>1?"s":""} ✓`)};
 $("pdjAdd").onclick=()=>{s.pdjList.push({room:rooms[0]||"",pax:"2"});renderPdjList();commit()};
+document.querySelectorAll("[data-step]").forEach(b=>b.onclick=()=>{const i=$("pdjPax");i.value=Math.max(0,(parseInt(i.value)||0)+parseInt(b.dataset.step));i.dispatchEvent(new Event("input"))});
 $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1",note:""});renderAst();commit()};
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();commit();toast("Chambres mises à jour")}};
-$("orderCopy").onclick=async()=>{const t=buildOrder();if(!t){toast("Pas de PDJ : rien à commander");return}
-  try{await navigator.clipboard.writeText(t);toast("Commande copiée ✓")}catch(e){const r=document.createRange();r.selectNodeContents($("orderPreview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
-$("orderWa").addEventListener("click",e=>{if(!buildOrder()){e.preventDefault();toast("Pas de PDJ : rien à commander")}});
+$("wa").addEventListener("click",e=>{if(!tabText()){e.preventDefault();toast("Rien à envoyer")}});
 /* impression
    - iPhone / iPad : window.print() ne marche pas dans une web app ajoutée à l'écran d'accueil
      → on fabrique un PDF et on ouvre le menu Partager, qui contient « Imprimer » (AirPrint)
@@ -612,17 +738,16 @@ async function printText(t,big,name){
     console.error(e);toast("Impression impossible : réessaie (connexion internet nécessaire)");
   }
 }
-$("printBtn").onclick=()=>tab==="pdj"?printText(buildPdj(),true,"Petit-dejeuner"):printText(build(),false,"Rapport-de-shift");
-$("orderPrint").onclick=()=>printText(buildOrder(),true,"Commande-boulangerie");
+$("printBtn").onclick=()=>tab==="pdj"?printText(buildPdj(),true,"Petit-dejeuner"):tab==="commande"?printText(buildOrder(),true,"Commande-boulangerie"):printText(build(),false,"Rapport-de-shift");
 $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
   if(!ns){toast("Format non reconnu");return}
   s=ns;$("pasteArea").value="";renderAll();commit();toast("Rapport importé ✓")};
-$("copy").onclick=async()=>{const txt=tab==="pdj"?buildPdj():build();try{await navigator.clipboard.writeText(txt);toast("Copié ✓")}catch(e){
-  const r=document.createRange();r.selectNodeContents($(tab==="pdj"?"pdjPreview":"preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
-$("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes,kt=s.orderTime;s=blank();s.notes=keep;s.orderTime=kt;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";renderAll();commit();toast("Rapport vidé (précisions gardées)")}
-  else{$("reset").dataset.c="1";$("reset").textContent="Confirmer ?";setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport"},3000)}};
+$("copy").onclick=async()=>{const txt=tabText();if(!txt){toast("Rien à copier");return}try{await navigator.clipboard.writeText(txt);toast("Copié")}catch(e){
+  const r=document.createRange();r.selectNodeContents($(tab==="pdj"?"pdjPreview":tab==="commande"?"orderPreview":"preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
+$("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes,kt=s.orderTime;s=blank();s.notes=keep;s.orderTime=kt;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";$("reset").classList.remove("armed");renderAll();commit();toast("Rapport vidé (précisions gardées)")}
+  else{$("reset").dataset.c="1";$("reset").textContent="Vider ?";$("reset").classList.add("armed");setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";$("reset").classList.remove("armed")},3000)}};
 
-$("date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+$("date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"});
 load();
 applyDefaultsOnce();
 const patch=urlPatch();
@@ -635,7 +760,7 @@ if(patch){
     push({fromClaude:updated}).then(()=>setSync("☁️ Envoyé au téléphone ✓"));
   });
 }else{renderAll();startSync()}
-showTab(location.hash==="#pdj"?"pdj":"rapport");
+showTab((location.hash||"").replace("#",""));
 
 /* pour les tests */
 window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
