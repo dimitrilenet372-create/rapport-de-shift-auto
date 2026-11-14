@@ -565,14 +565,55 @@ $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>
 $("orderCopy").onclick=async()=>{const t=buildOrder();if(!t){toast("Pas de PDJ : rien à commander");return}
   try{await navigator.clipboard.writeText(t);toast("Commande copiée ✓")}catch(e){const r=document.createRange();r.selectNodeContents($("orderPreview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
 $("orderWa").addEventListener("click",e=>{if(!buildOrder()){e.preventDefault();toast("Pas de PDJ : rien à commander")}});
-/* impression : AirPrint sur iPhone, imprimantes du Mac/PC sinon */
-function printText(t,big){
-  if(!t){toast("Rien à imprimer");return}
-  const a=$("printArea");a.textContent=t;a.classList.toggle("big",!!big);
-  try{window.print()}catch(e){toast("Impression impossible ici")}
+/* impression
+   - iPhone / iPad : window.print() ne marche pas dans une web app ajoutée à l'écran d'accueil
+     → on fabrique un PDF et on ouvre le menu Partager, qui contient « Imprimer » (AirPrint)
+   - ordinateur : fenêtre d'impression classique */
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+let jsPDFReady=null;
+function loadJsPDF(){
+  if(window.jspdf)return Promise.resolve();
+  if(!jsPDFReady)jsPDFReady=new Promise((ok,ko)=>{const sc=document.createElement("script");
+    sc.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";sc.onload=ok;sc.onerror=()=>{jsPDFReady=null;ko()};document.head.appendChild(sc)});
+  return jsPDFReady;
 }
-$("printBtn").onclick=()=>tab==="pdj"?printText(buildPdj(),true):printText(build(),false);
-$("orderPrint").onclick=()=>printText(buildOrder(),true);
+if(IS_IOS)loadJsPDF().catch(()=>{});   /* chargé d'avance pour que Partager s'ouvre tout de suite */
+/* les polices du PDF n'ont pas les emojis : on les retire */
+const pdfSafe=t=>t.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\u{2060}]/gu,"").replace(/[ \t]+$/gm,"");
+function makePdf(t,big){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"mm",format:"a4"});
+  const size=big?18:11,lh=size*0.5,top=16,left=15,width=180,bottom=282;
+  doc.setFont("helvetica","normal");doc.setFontSize(size);
+  let y=top;
+  pdfSafe(t).split("\n").forEach(line=>{
+    const parts=line?doc.splitTextToSize(line,width):[""];
+    parts.forEach(p=>{if(y>bottom){doc.addPage();y=top}doc.text(p,left,y);y+=lh});
+  });
+  return doc.output("blob");
+}
+async function printText(t,big,name){
+  if(!t){toast("Rien à imprimer");return}
+  if(!IS_IOS){
+    const a=$("printArea");a.textContent=t;a.classList.toggle("big",!!big);
+    try{window.print()}catch(e){toast("Impression impossible ici")}
+    return;
+  }
+  try{
+    if(!window.jspdf){toast("Préparation de l'impression…");await loadJsPDF()}
+    const file=new File([makePdf(t,big)],(name||"impression")+".pdf",{type:"application/pdf"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:name||"Impression"});   /* puis « Imprimer » dans le menu */
+    }else{
+      const url=URL.createObjectURL(file);const w=window.open(url,"_blank");
+      if(!w){location.href=url}
+    }
+  }catch(e){
+    if(e&&e.name==="AbortError")return;   /* menu Partager fermé */
+    console.error(e);toast("Impression impossible : réessaie (connexion internet nécessaire)");
+  }
+}
+$("printBtn").onclick=()=>tab==="pdj"?printText(buildPdj(),true,"Petit-dejeuner"):printText(build(),false,"Rapport-de-shift");
+$("orderPrint").onclick=()=>printText(buildOrder(),true,"Commande-boulangerie");
 $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
   if(!ns){toast("Format non reconnu");return}
   s=ns;$("pasteArea").value="";renderAll();commit();toast("Rapport importé ✓")};
