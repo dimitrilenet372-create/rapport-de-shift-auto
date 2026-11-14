@@ -169,6 +169,9 @@
   <div id="pdjListBox"></div>
   <button class="add" id="pdjAdd">+ Ajouter une chambre</button>
   <div class="ptotal"><span>Total</span><span id="pdjTotal">0 pax</span></div>
+  <div class="sub">Ou colle une liste ici (ex. « #3 : 2 pax », une chambre par ligne)</div>
+  <textarea id="pdjPaste" placeholder="#2 : 2 pax&#10;#3 : 2 pax&#10;#8 : 4 pax"></textarea>
+  <button class="btn copy" id="pdjPasteBtn" style="margin-top:8px;width:100%">Remplir la liste</button>
 </div>
 <div class="card">
   <h2>Aperçu</h2>
@@ -368,6 +371,16 @@ function renderPdjList(){
     r.append("#",sel,p,"pax",x);w.appendChild(r);box.appendChild(w);
   });
 }
+/* lit une liste collée : « #3 : 2 pax », « 3 : 2 », « Chambre 3 - 2 personnes »… (ignore la date et le total) */
+function parsePdjList(txt){
+  const out=[];
+  String(txt||"").split(/\r?\n/).forEach(l=>{
+    const n=norm(l);if(!n||n.startsWith("total"))return;
+    const m=l.match(/#?\s*(?:ch(?:ambre)?\.?\s*)?(\d+)\s*[:=\-–>]+\s*(\d+)/i)||l.match(/^\s*#\s*(\d+)\D+(\d+)/);
+    if(m)out.push({room:m[1],pax:m[2]});
+  });
+  return out;
+}
 function showTab(t){
   tab=t==="pdj"?"pdj":"rapport";
   $("tab-rapport").classList.toggle("hidden",tab!=="rapport");
@@ -530,6 +543,9 @@ $("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();setClaudeLink(
 /* la demande est aussi copiée, au cas où Claude s'ouvrirait vide */
 $("claudeBtn").addEventListener("click",()=>{try{navigator.clipboard.writeText(claudePrompt()).catch(()=>{})}catch(e){}});
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+$("pdjPasteBtn").onclick=()=>{const rows=parsePdjList($("pdjPaste").value);
+  if(!rows.length){toast("Aucune chambre trouvée dans le texte");return}
+  s.pdjList=rows;$("pdjPaste").value="";renderPdjList();commit();toast(`${rows.length} chambre${rows.length>1?"s":""} ajoutée${rows.length>1?"s":""} ✓`)};
 $("pdjAdd").onclick=()=>{s.pdjList.push({room:rooms[0]||"",pax:"2"});renderPdjList();commit()};
 $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1",note:""});renderAst();commit()};
 $("roomsCfg").onchange=()=>{const v=$("roomsCfg").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);if(v.length){rooms=v;renderChips();renderAst();commit();toast("Chambres mises à jour")}};
@@ -560,7 +576,7 @@ if(patch){
 showTab(location.hash==="#pdj"?"pdj":"rapport");
 
 /* pour les tests */
-window.__rapport={parseReport,build,buildOrder,buildPdj,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
+window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
