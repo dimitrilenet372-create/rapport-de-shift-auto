@@ -94,6 +94,9 @@ textarea.long{min-height:220px;font-size:16px}
 .plate.on{background:var(--bois);border-color:var(--bois);color:var(--sheet)}
 @media (prefers-color-scheme:dark){.plate.on{color:#0E1611}}
 .plate-label{font-weight:700;margin-bottom:8px}
+.plate.done{background:var(--mousse);border-color:var(--mousse);color:#fff;position:relative}
+.plate.done::after{content:"✓";position:absolute;right:-3px;top:-5px;width:18px;height:18px;border-radius:50%;background:var(--sheet);color:var(--mousse);font-size:12px;line-height:18px;border:1.5px solid var(--mousse)}
+.plate-hint{font-size:13px;color:var(--soft);margin:-4px 0 8px}
 
 /* chambre + pax : plaque, compteur, retirer */
 .roomrow{display:flex;align-items:center;gap:10px}
@@ -202,7 +205,7 @@ details[open]>summary::after{content:" –"}
     <h2>Nettoyage <small>pour demain</small></h2>
     <div class="group">
       <div class="item"><input type="text" id="netNote" placeholder="Info ménage, ex. Lydie vient vers 12h30"></div>
-      <div class="item"><div class="plate-label">MÀB</div><div class="plates" data-group="mab"></div><div class="notebox" data-note="mabNote" data-ph="ex. laisser le canapé lit dans la 4"></div></div>
+      <div class="item"><div class="plate-label">MÀB</div><div class="plate-hint">1 appui : à faire · 2 appuis : faite ✓ · 3 appuis : retirer</div><div class="plates" data-group="mab"></div><div class="notebox" data-note="mabNote" data-ph="ex. laisser le canapé lit dans la 4"></div></div>
       <div class="item"><div class="plate-label">Arrivées</div><div class="plates" data-group="arr"></div><div class="notebox" data-note="arrNote" data-ph="précision"></div></div>
       <div class="item"><div class="plate-label">Recouche</div><div class="plates" data-group="rec"></div><div class="notebox" data-note="recNote" data-ph="précision"></div></div>
     </div>
@@ -303,7 +306,7 @@ const STATES=["/","A voir","A faire","Fait"];
 const KEY="rapportShift_v1";
 const blankTasks=()=>Object.fromEntries(TASKS.map(t=>[t,"/"]));
 const blankNotes=()=>Object.fromEntries(TASKS.map(t=>[t,""]));
-const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30",pdjList:[]});
+const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabDone:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30",pdjList:[]});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let s=blank();
 let updated=0;
@@ -329,7 +332,7 @@ function clean(x){
   if(x.the&&!taskNotes["Sachets de thé"])taskNotes["Sachets de thé"]=String(x.the);   /* ancienne version */
   return{tasks,taskNotes,
     ast:arr(x.ast).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??""),note:String(a.note||"")})),
-    netNote:x.netNote||"",mab:arr(x.mab).map(String),mabNote:x.mabNote||"",arr:arr(x.arr).map(String),arrNote:x.arrNote||"",
+    netNote:x.netNote||"",mab:arr(x.mab).map(String),mabDone:arr(x.mabDone).map(String).filter(n=>arr(x.mab).map(String).includes(n)),mabNote:x.mabNote||"",arr:arr(x.arr).map(String),arrNote:x.arrNote||"",
     rec:arr(x.rec).map(String),recNote:x.recNote||"",pdjPax:String(x.pdjPax??""),pdjTables:x.pdjTables||"",
     strip:arr(x.strip).map(String),notes:isOld(x)?joinNotes(oldBul(x.notes),x.perm,oldBul(x.notes2)):String(x.notes||""),
     orderOv:Object.fromEntries(Object.entries(x.orderOv||{}).filter(([k,v])=>PRODUCTS.some(p=>p.k===k)&&v!==""&&v!==null).map(([k,v])=>[k,String(v)])),
@@ -405,9 +408,18 @@ function renderTasks(){
 function renderChips(){
   document.querySelectorAll(".plates").forEach(c=>{
     const g=c.dataset.group;c.innerHTML="";
-    sortRooms([...new Set([...rooms,...s[g]])]).forEach(n=>{const b=el("button","plate"+(s[g].includes(n)?" on":""),n);b.type="button";
-      b.setAttribute("aria-pressed",s[g].includes(n));
-      b.onclick=()=>{s[g]=s[g].includes(n)?s[g].filter(x=>x!==n):[...s[g],n];renderChips();commit()};c.appendChild(b)});
+    sortRooms([...new Set([...rooms,...s[g]])]).forEach(n=>{
+      const on=s[g].includes(n),done=g==="mab"&&on&&s.mabDone.includes(n);
+      const b=el("button","plate"+(done?" done":on?" on":""),n);b.type="button";
+      b.setAttribute("aria-pressed",on);if(g==="mab"&&on)b.setAttribute("aria-label",`#${n} ${done?"faite":"à faire"}`);
+      b.onclick=()=>{
+        if(g==="mab"){
+          /* à faire -> faite -> retirée */
+          if(!on)s.mab=[...s.mab,n];
+          else if(!done)s.mabDone=[...s.mabDone,n];
+          else{s.mab=s.mab.filter(x=>x!==n);s.mabDone=s.mabDone.filter(x=>x!==n)}
+        }else s[g]=on?s[g].filter(x=>x!==n):[...s[g],n];
+        renderChips();commit()};c.appendChild(b)});
   });
   document.querySelectorAll(".notebox").forEach(nb=>{const k=nb.dataset.note;nb.innerHTML="";
     nb.appendChild(noteField(s[k],nb.dataset.ph,v=>{s[k]=v;commit()}))});
@@ -529,6 +541,14 @@ function showTab(t){
 /* ---------- texte du rapport ---------- */
 const paren=n=>n&&n.trim()?` (${n.trim()})`:"";
 function roomsFr(a){const l=sortRooms(a);if(!l.length)return"/";if(l.length===1)return l[0];return l.slice(0,-1).join(", ")+" et "+l[l.length-1]}
+const hashFr=a=>roomsFr(a.map(String)).replace(/(^|, | et )(\d+)/g,"$1#$2");
+function mabFr(){
+  const todo=sortRooms(s.mab.filter(n=>!s.mabDone.includes(n))),done=sortRooms(s.mab.filter(n=>s.mabDone.includes(n)));
+  if(!s.mab.length)return"/";
+  if(!done.length)return hashFr(todo);
+  const f=`${hashFr(done)} ${done.length>1?"faites":"faite"}`;
+  return todo.length?`${f}, il reste ${hashFr(todo)}`:f;
+}
 function build(){
   const L=["RAPPORT DE SHIFT:",""];
   TASKS.forEach(t=>L.push(`${t} : ${s.tasks[t]}${paren(s.taskNotes[t])}`));
@@ -536,7 +556,7 @@ function build(){
   const ast=s.ast.filter(a=>a.room);
   if(ast.length)ast.forEach(a=>L.push(`#${a.room} : ${a.pax||0} pax${a.note&&a.note.trim()?" "+a.note.trim():""}`));else L.push("/");
   L.push("",`NETTOYAGE :${s.netNote.trim()?" "+s.netNote.trim():""}`);
-  L.push(`MÀB : ${roomsFr(s.mab)}${paren(s.mabNote)}`,`Arrivées : ${roomsFr(s.arr)}${paren(s.arrNote)}`,`Recouche : ${roomsFr(s.rec)}${paren(s.recNote)}`,"");
+  L.push(`MÀB : ${mabFr()}${paren(s.mabNote)}`,`Arrivées : ${roomsFr(s.arr)}${paren(s.arrNote)}`,`Recouche : ${roomsFr(s.rec)}${paren(s.recNote)}`,"");
   const pax=parseInt(s.pdjPax)||0;
   L.push(`PDJ : ${pax?pax+" pax":"/"}`);
   if(pax)s.pdjTables.split("\n").map(x=>x.trim()).filter(Boolean).forEach(x=>L.push(x));
@@ -616,14 +636,14 @@ function urlPatch(){
 }
 function applyPatch(base,p){
   const ns=clean(base);
-  ns.ast=p.ast;ns.mab=p.mab;ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};if(p.pdjList)ns.pdjList=p.pdjList;
+  ns.ast=p.ast;ns.mab=p.mab;ns.mabDone=[];ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};if(p.pdjList)ns.pdjList=p.pdjList;
   return ns;
 }
 
 /* ---------- import d'un rapport texte (secours) ---------- */
 function parseReport(txt){
   const ns=clean(s);let section="";let found=false;
-  ["ast","mab","arr","rec","strip"].forEach(k=>ns[k]=[]);["pdjPax","pdjTables","netNote","mabNote","arrNote","recNote"].forEach(k=>ns[k]="");
+  ["ast","mab","mabDone","arr","rec","strip"].forEach(k=>ns[k]=[]);["pdjPax","pdjTables","netNote","mabNote","arrNote","recNote"].forEach(k=>ns[k]="");
   const after=l=>l.split(":").slice(1).join(":").trim();
   const roomsAndNote=v=>{const i=v.indexOf("(");const head=i>-1?v.slice(0,i):v;const note=i>-1?v.slice(i+1).replace(/\)\s*$/,""):"";return{rooms:head.match(/\d+/g)||[],note:note.trim()}};
   const tables=[],notes=[];
@@ -645,7 +665,9 @@ function parseReport(txt){
     if(section==="ast"){const m=l.match(/^#?\s*(\d+)\s*:\s*(\d+)\s*(?:pax)?\s*(.*)$/i);if(m)ns.ast.push({room:m[1],pax:m[2],note:m[3].trim()});return}
     if(section==="net"){
       const k=n.startsWith("mab")?"mab":n.startsWith("arrivee")?"arr":n.startsWith("recouche")?"rec":null;
-      if(k){const r=roomsAndNote(after(l));ns[k]=r.rooms;ns[k+"Note"]=r.note}
+      if(k){const r=roomsAndNote(after(l));ns[k]=r.rooms;ns[k+"Note"]=r.note;
+        if(k==="mab"){const v=after(l).split("(")[0];const parts=v.split(/il reste/i);
+          if(/fait/i.test(parts[0]))ns.mabDone=parts[0].match(/\d+/g)||[]}}
       return}
     if(section==="pdj"){if(l!=="/")tables.push(l);return}
   });
