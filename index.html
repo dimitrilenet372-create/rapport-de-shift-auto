@@ -687,7 +687,7 @@ function claudePrompt(){
 `2. Lis le planning (une colonne = une nuit) :`,
 `- ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre d'adultes de chaque réservation.`,
 `- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
-`- PDJ du ${lendemain} matin : ouvre le dossier (icône dossier de la fiche) de chaque chambre occupée et compte les lignes « Petit-déjeuner » (les observations ne suffisent pas). Une table par chambre (ex. « 1 table de 3, 1 table de 2 »).`,
+`- PDJ du ${lendemain} matin : pour chaque chambre occupée, vérifie DEUX sources : (1) le dossier (icône dossier de la fiche) : compte les lignes « Petit-déjeuner » ou les prestations qui incluent le petit-déjeuner ; (2) les observations de la fiche (ex. « Pdj oui ») : si elles sont coupées à l'écran, lis le texte complet de la fiche. Une chambre a le PDJ si l'une des deux sources l'indique ; si elles ne disent pas la même chose, signale-le dans les points à vérifier. Une table par chambre (ex. « 1 table de 3, 1 table de 2 »).`,
 `Règles : ne modifie rien. Ferme une fiche en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Pour sortir d'un dossier, clique QUITTER. Laisse l'onglet Asterio ouvert à la fin.`,
 ``,
 `3. Envoie le rapport dans mon app : ouvre dans ton groupe cette adresse en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte, et dans pdjch chambre:nombre de petits-déjeuners de chaque chambre ; numéros séparés par des virgules, rien après le = s'il n'y a rien, + à la place des espaces) :`,
