@@ -126,6 +126,11 @@ textarea.long{min-height:220px;font-size:16px}
 
 /* aperçu : le message tel qu'il partira */
 pre{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:15px;line-height:1.5;padding:14px}
+/* bulle du petit-déj : le message se modifie directement */
+textarea.bubble{display:block;border:none;border-radius:0;background:var(--sheet);font-size:16px;line-height:1.5;padding:14px;min-height:0;resize:none;overflow:hidden}
+textarea.bubble:focus{outline:none;background:var(--page)}
+.bubble-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--line);font-size:14px;color:var(--soft)}
+.bubble-foot button{border:none;background:none;color:var(--bois);font-weight:700;font-size:14px;padding:0;white-space:nowrap}
 details>summary{list-style:none;padding:13px 14px;color:var(--bois);font-weight:700;cursor:pointer}
 details>summary::-webkit-details-marker{display:none}
 details>summary::after{content:" +";}
@@ -267,7 +272,10 @@ details[open]>summary::after{content:" –"}
   </section>
   <section class="sec">
     <h2>Message</h2>
-    <div class="group"><pre id="pdjPreview"></pre></div>
+    <div class="group">
+      <textarea id="pdjPreview" class="bubble" rows="6" aria-label="Message du petit-déjeuner" spellcheck="false"></textarea>
+      <div class="bubble-foot"><span>Touche le texte pour le modifier</span><button type="button" id="pdjAuto" class="hidden">Texte d'origine</button></div>
+    </div>
   </section>
 </div>
 
@@ -306,7 +314,7 @@ const STATES=["/","A voir","A faire","Fait"];
 const KEY="rapportShift_v1";
 const blankTasks=()=>Object.fromEntries(TASKS.map(t=>[t,"/"]));
 const blankNotes=()=>Object.fromEntries(TASKS.map(t=>[t,""]));
-const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabDone:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30",pdjList:[]});
+const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabDone:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30",pdjList:[],pdjText:""});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let s=blank();
 let updated=0;
@@ -337,7 +345,8 @@ function clean(x){
     strip:arr(x.strip).map(String),notes:isOld(x)?joinNotes(oldBul(x.notes),x.perm,oldBul(x.notes2)):String(x.notes||""),
     orderOv:Object.fromEntries(Object.entries(x.orderOv||{}).filter(([k,v])=>PRODUCTS.some(p=>p.k===k)&&v!==""&&v!==null).map(([k,v])=>[k,String(v)])),
     orderTime:x.orderTime||"7h30",
-    pdjList:arr(x.pdjList).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??"")}))};
+    pdjList:arr(x.pdjList).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??""),note:String(a.note||"")})),
+    pdjText:String(x.pdjText||"")};
 }
 const DEFAULT_NOTES=`- La #3 partira à 14h00 maximum
 
@@ -499,14 +508,33 @@ let tab="rapport";
 const pdjSum=()=>s.pdjList.reduce((t,a)=>t+(parseInt(a.pax)||0),0);
 function courte(iso){const [y,m,d]=iso.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})}
 function dateDuJour(){const [y,m,d]=repDate.split("-").map(Number);const t=new Date(y,m-1,d).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});return t.charAt(0).toUpperCase()+t.slice(1)}
-function buildPdj(){
-  const L=[dateDuJour(),""];
-  const rows=s.pdjList.filter(a=>a.room);
-  [...rows].sort((a,b)=>(parseFloat(a.room)||0)-(parseFloat(b.room)||0)).forEach(a=>L.push(`#${a.room} : ${parseInt(a.pax)||0} pax`));
-  if(!rows.length)L.push("/");
-  L.push("",`Total : ${pdjSum()} pax`);
-  return L.join("\n");
+function pdjRoomLines(){
+  const rows=s.pdjList.filter(a=>a.room).sort((a,b)=>(parseFloat(a.room)||0)-(parseFloat(b.room)||0));
+  return rows.length?rows.map(a=>`#${a.room} : ${parseInt(a.pax)||0} pax${a.note||""}`):["/"];
 }
+function buildPdj(){return[dateDuJour(),"",...pdjRoomLines(),"",`Total : ${pdjSum()} pax`].join("\n")}
+
+/* bulle modifiable : ce que Dimitri écrit est gardé tel quel ;
+   les lignes « #3 : 2 pax … » remplissent la liste, le total et la date se mettent à jour seuls */
+const PDJ_LINE=/^\s*#\s*(\d+)\s*[:=\-–]?\s*(\d+)\s*(?:pax|pers(?:onnes?)?\.?)?(.*)$/i;
+const AUTO_DATE=/^(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche) \d{1,2}(er)? [a-zéû]+$/i;
+const pdjFromText=t=>String(t||"").split("\n").map(l=>l.match(PDJ_LINE)).filter(Boolean).map(m=>({room:m[1],pax:m[2],note:(m[3]||"").replace(/\s+$/,"")}));
+function patchPdj(t){
+  const out=[];let placed=false;
+  String(t).split("\n").forEach((l,i)=>{
+    if(PDJ_LINE.test(l)||l.trim()==="/"){if(!placed){out.push(...pdjRoomLines());placed=true}return}
+    if(/^\s*total\b/i.test(l)){out.push(/\d+/.test(l)?l.replace(/\d+/,String(pdjSum())):`Total : ${pdjSum()} pax`);return}
+    if(i===0&&AUTO_DATE.test(l.trim())){out.push(dateDuJour());return}
+    out.push(l);
+  });
+  if(!placed&&s.pdjList.some(a=>a.room)){
+    const ti=out.findIndex(l=>/^\s*total\b/i.test(l));
+    if(ti<0)out.push(...pdjRoomLines());else out.splice(ti>0&&out[ti-1].trim()===""?ti-1:ti,0,...pdjRoomLines());
+  }
+  return out.join("\n");
+}
+const pdjText=()=>s.pdjText?patchPdj(s.pdjText):buildPdj();
+function fitBubble(){const b=$("pdjPreview");b.style.height="auto";b.style.height=b.scrollHeight+"px"}
 function renderPdjList(){
   const box=$("pdjListBox");box.innerHTML="";
   if(!s.pdjList.length)box.appendChild(el("div","empty","Aucune chambre. Claude la remplit, ou ajoute-les ici."));
@@ -569,10 +597,12 @@ function build(){
   L.push(...P,"","Bonne soirée à tous 😊");
   return L.join("\n");
 }
-const tabText=()=>tab==="pdj"?buildPdj():tab==="commande"?buildOrder():build();
+const tabText=()=>tab==="pdj"?pdjText():tab==="commande"?buildOrder():build();
 function refresh(){
   $("preview").textContent=build();
-  $("pdjPreview").textContent=buildPdj();$("pdjTotal").textContent=pdjSum();
+  if(document.activeElement!==$("pdjPreview")){$("pdjPreview").value=pdjText();if(tab==="pdj")fitBubble()}
+  $("pdjTotal").textContent=pdjSum();
+  $("pdjAuto").classList.toggle("hidden",!s.pdjText||pdjText()===buildPdj());
   $("pdjDateLbl").textContent=courte(repDate);
   refreshOrder();
   const t=tabText();
@@ -636,7 +666,7 @@ function urlPatch(){
 }
 function applyPatch(base,p){
   const ns=clean(base);
-  ns.ast=p.ast;ns.mab=p.mab;ns.mabDone=[];ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};if(p.pdjList)ns.pdjList=p.pdjList;
+  ns.ast=p.ast;ns.mab=p.mab;ns.mabDone=[];ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};if(p.pdjList){ns.pdjList=p.pdjList.map(a=>Object.assign({note:""},a));ns.pdjText=""}
   return ns;
 }
 
@@ -708,6 +738,12 @@ document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>showTab(b.dat
 $("pdjPasteBtn").onclick=()=>{const rows=parsePdjList($("pdjPaste").value);
   if(!rows.length){toast("Aucune chambre trouvée dans le texte");return}
   s.pdjList=rows;$("pdjPaste").value="";renderPdjList();commit();toast(`${rows.length} chambre${rows.length>1?"s":""} ajoutée${rows.length>1?"s":""} ✓`)};
+$("pdjPreview").addEventListener("input",()=>{
+  const t=$("pdjPreview").value;s.pdjText=t;s.pdjList=pdjFromText(t);
+  fitBubble();renderPdjList();commit();
+});
+$("pdjPreview").addEventListener("blur",()=>{if(s.pdjText){s.pdjText=patchPdj(s.pdjText);saveLocal();schedulePush()}refresh()});
+$("pdjAuto").onclick=()=>{s.pdjText="";s.pdjList.forEach(a=>a.note="");renderPdjList();commit();toast("Texte d'origine remis")};
 $("pdjAdd").onclick=()=>{s.pdjList.push({room:rooms[0]||"",pax:"2"});renderPdjList();commit()};
 document.querySelectorAll("[data-step]").forEach(b=>b.onclick=()=>{const i=$("pdjPax");i.value=Math.max(0,(parseInt(i.value)||0)+parseInt(b.dataset.step));i.dispatchEvent(new Event("input"))});
 $("astAdd").onclick=()=>{s.ast.push({room:rooms[0]||"",pax:"1",note:""});renderAst();commit()};
@@ -760,12 +796,13 @@ async function printText(t,big,name){
     console.error(e);toast("Impression impossible : réessaie (connexion internet nécessaire)");
   }
 }
-$("printBtn").onclick=()=>tab==="pdj"?printText(buildPdj(),true,"Petit-dejeuner"):tab==="commande"?printText(buildOrder(),true,"Commande-boulangerie"):printText(build(),false,"Rapport-de-shift");
+$("printBtn").onclick=()=>tab==="pdj"?printText(pdjText(),true,"Petit-dejeuner"):tab==="commande"?printText(buildOrder(),true,"Commande-boulangerie"):printText(build(),false,"Rapport-de-shift");
 $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
   if(!ns){toast("Format non reconnu");return}
   s=ns;$("pasteArea").value="";renderAll();commit();toast("Rapport importé ✓")};
 $("copy").onclick=async()=>{const txt=tabText();if(!txt){toast("Rien à copier");return}try{await navigator.clipboard.writeText(txt);toast("Copié")}catch(e){
-  const r=document.createRange();r.selectNodeContents($(tab==="pdj"?"pdjPreview":tab==="commande"?"orderPreview":"preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
+  if(tab==="pdj"){$("pdjPreview").select();toast("Sélectionné — copie manuelle");return}
+  const r=document.createRange();r.selectNodeContents($(tab==="commande"?"orderPreview":"preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
 $("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes,kt=s.orderTime;s=blank();s.notes=keep;s.orderTime=kt;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";$("reset").classList.remove("armed");renderAll();commit();toast("Rapport vidé (précisions gardées)")}
   else{$("reset").dataset.c="1";$("reset").textContent="Vider ?";$("reset").classList.add("armed");setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";$("reset").classList.remove("armed")},3000)}};
 
