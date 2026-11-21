@@ -340,7 +340,9 @@ textarea.recap{min-height:260px;background:var(--sheet);border:none;border-radiu
           <div class="plate-label">Voix</div>
           <select id="voiceName">
             <optgroup label="Gratuit, fabriqué sur le téléphone">
-              <option value="piper:fr_FR-siwis-medium">Siwis (femme)</option>
+              <option value="piper:fr_FR-upmc-medium:0">Jessica (femme, posée)</option>
+              <option value="piper:fr_FR-siwis-medium">Siwis (femme, claire)</option>
+              <option value="piper:fr_FR-upmc-medium:1">Pierre (homme, posé)</option>
               <option value="piper:fr_FR-tom-medium">Tom (homme)</option>
             </optgroup>
             <optgroup label="OpenAI, plus naturel (clé payante)">
@@ -350,6 +352,12 @@ textarea.recap{min-height:260px;background:var(--sheet);border:none;border-radiu
               <option value="ash">Ash (homme, naturel)</option>
               <option value="onyx">Onyx (homme, grave)</option>
             </optgroup>
+          </select>
+          <div class="plate-label" style="margin-top:12px">Débit</div>
+          <select id="voiceSpeed">
+            <option value="1">Normal</option>
+            <option value="1.2">Posé</option>
+            <option value="1.4">Lent</option>
           </select>
           <p class="hint" id="piperHint" style="margin:6px 0 0">La 1re fois, la voix se télécharge (≈ 60 Mo, plutôt en Wi-Fi). Ensuite c'est plus rapide.</p>
           <div id="keyBox" class="hidden" style="margin-top:12px">
@@ -818,8 +826,8 @@ function recapPrompt(){
 ``,
 `2. Le récap (texte simple, phrases courtes, qui se lit aussi à voix haute ; pas de tableau, pas de caractères # & ou +, écris les chambres « ch3 ») :`,
 `- Ce soir : chambres occupées sur 9, chambres libres.`,
-`- Déjà arrivés (statut Présent) : chambre, nom, pax, solde restant.`,
-`- Arrivées attendues (statut Confirmé) : chambre, nom, pax, points d'attention (lit bébé, animal, heure d'arrivée, surclassement, PDJ…).`,
+`- Déjà arrivés (statut Présent) : chambre, nom, pax, solde restant. Chambres dans l'ordre croissant.`,
+`- Arrivées attendues (statut Confirmé) : chambre, nom, pax, points d'attention (lit bébé, animal, heure d'arrivée, surclassement, PDJ…). Chambres dans l'ordre croissant.`,
 `- Demain ${demain} : départs, arrivées, recouches, PDJ repérés (à confirmer dans les dossiers), événements notés en haut du planning.`,
 ``,
 `3. Envoie-le dans mon app : ouvre dans ton groupe ${APP_URL}?recap=TEXTE en mettant une ligne par élément, les lignes séparées par « | » et les espaces remplacés par « + ». Attends « Envoyé au téléphone ✓ » sous le titre, puis ferme cet onglet (garde celui d'Asterio).`,
@@ -927,8 +935,8 @@ showTab((location.hash||"").replace("#",""));
    puis partagé en fichier audio (menu Partager → WhatsApp → la personne).
    La clé reste dans ce navigateur (localStorage), elle n'est jamais envoyée à Firebase. */
 const VOICE_KEY="rapportShift_voice_v1";
-const PIPER_DEFAULT="piper:fr_FR-siwis-medium";
-function voiceCfg(){let c={key:"",voice:PIPER_DEFAULT};try{c=Object.assign(c,JSON.parse(localStorage.getItem(VOICE_KEY)||"{}"))}catch(e){}
+const PIPER_DEFAULT="piper:fr_FR-upmc-medium:0";
+function voiceCfg(){let c={key:"",voice:PIPER_DEFAULT,speed:"1.2"};try{c=Object.assign(c,JSON.parse(localStorage.getItem(VOICE_KEY)||"{}"))}catch(e){}
   return c}
 function saveVoiceCfg(c){try{localStorage.setItem(VOICE_KEY,JSON.stringify(c))}catch(e){}}
 
@@ -941,7 +949,7 @@ function oral(t){
     .replace(/\b1\s*pax\b/gi,"1 personne").replace(/(\d+)\s*pax\b/gi,"$1 personnes").replace(/\bpax\b/gi,"personnes")
     .replace(/\bPDJ\b/gi,"petit-déjeuner").replace(/\bMÀB\b|\bMAB\b/gi,"mises à blanc")
     .replace(/\b(\d{1,2})h(\d{2})\b/g,"$1 heures $2").replace(/\b(\d{1,2})h\b/g,"$1 heures")
-    .replace(/(\d+),(\d{2})\s*€/g,"$1 euros $2").replace(/€/g,"euros")
+    .replace(/(\d+),(\d{2})\s*(?:€|euros?)/g,"$1 euros $2").replace(/€/g,"euros").replace(/\bM\.\s/g,"monsieur ").replace(/\bMme\s/g,"madame ")
     .replace(/ heures 00\b/g," heures")
     .replace(/(\d+[,.]?\d*)\s*°C/g,"$1 degrés").replace(/\s*&\s*/g," et ").replace(/(^|\s)\+\s*(?=\d)/g,"$1plus ")
     .replace(/([.!?]\s+)([a-zà-ÿ])/g,(_,p,c)=>p+c.toUpperCase())
@@ -980,21 +988,47 @@ function spokenReport(){
   P.push("Voilà, bonne soirée à tous !");
   return oral(P.join("\n\n"));
 }
-const spokenText=()=>oral(s.recap.trim()?s.recap:spokenReport());
+/* récap lu à voix haute : chambres remises dans l'ordre (1 → 9) avec leur statut, une phrase par ligne */
+function recapSpoken(txt){
+  const lines=String(txt||"").split("\n").map(l=>l.trim()).filter(Boolean);
+  const ROOM=/^(?:#|ch\.?\s*|chambre\s+)(\d+)\s*[:,.\-–]?\s*(.*)$/i;
+  const before=[],after=[],rooms=[];let sec="",zone="before";
+  const dot=l=>/[.!?:]$/.test(l)?l:l+".";
+  lines.forEach(l=>{
+    const m=l.match(ROOM);
+    if(!m){
+      if(/^demain/i.test(l))zone="after";
+      const isHead=l.length<45&&!/\d+\s*(pax|chambres?)/i.test(l)&&!/[,.]/.test(l.replace(/\d+ (novembre|décembre|janvier)/,""));
+      if(isHead&&zone!=="after"&&/arriv|présent|attendu|en cours|reste/i.test(l)){sec=l;zone="rooms";return}
+      (zone==="after"?after:before).push(dot(l));return}
+    if(zone==="rooms"){
+      const st=/déjà|présent|arrivés?$/i.test(sec)&&!/attendu/i.test(sec)?"déjà là":/attendu/i.test(sec)?"arrivée attendue":sec.toLowerCase();
+      rooms.push({n:parseInt(m[1]),t:`Chambre ${m[1]}, ${st} : ${dot(m[2])}`})}
+    else (zone==="after"?after:before).push(dot(l));
+  });
+  rooms.sort((a,b)=>a.n-b.n);
+  const out=[...before];
+  if(rooms.length)out.push("","Chambre par chambre.",...rooms.map(r=>r.t));
+  if(after.length)out.push("",...after);
+  out.push("","Voilà pour le récap. Bonne soirée !");
+  return out.join("\n");
+}
+const spokenText=()=>s.recap.trim()?oral(recapSpoken(s.recap)):spokenReport();
 
 let voiceFile=null,voiceUrl=null;
 function resetVoiceOut(){voiceFile=null;if(voiceUrl){URL.revokeObjectURL(voiceUrl);voiceUrl=null}$("voiceAudio").removeAttribute("src");$("voiceOut").classList.add("hidden")}
 function toggleKeyBox(){const pi=$("voiceName").value.startsWith("piper:");$("keyBox").classList.toggle("hidden",pi);$("piperHint").classList.toggle("hidden",!pi)}
 function initVoiceCfg(){const c=voiceCfg();
   if(!c.voice.startsWith("piper:")&&!c.key){c.voice=PIPER_DEFAULT;saveVoiceCfg(c)}   /* voix OpenAI sans clé : voix gratuite */
-  $("voiceName").value=c.voice;$("voiceKey").value=c.key;toggleKeyBox();$("voiceCfgBox").open=false}
+  if(![...$("voiceName").options].some(o=>o.value===c.voice))c.voice=PIPER_DEFAULT;$("voiceName").value=c.voice;$("voiceSpeed").value=c.speed;$("voiceKey").value=c.key;toggleKeyBox();$("voiceCfgBox").open=false}
 
 /* --- voix gratuite : Piper, calculée sur le téléphone (WebAssembly), puis convertie en MP3 --- */
-const PIPER_LIB="https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.5/dist/piper-tts-web.js";
+const PIPER_LIB="./vendor/piper/piper-tts-web.js";   /* copie locale : pauses et débit réglables */
 const LAME_LIB="https://cdn.jsdelivr.net/npm/@breezystack/lamejs@1.2.7/dist/lamejs.js";
 let piperMod=null,piperVoice=null;
-async function piperSpeak(text,voiceId,onStep){
+async function piperSpeak(text,voice,onStep,slow){
   const tts=piperMod||(piperMod=await import(PIPER_LIB));
+  const [voiceId,spk]=voice.split(":");tts.TtsSession.speaker=parseInt(spk)||0;tts.TtsSession.slow=slow||1;
   if(piperVoice!==voiceId)tts.TtsSession._instance=null;   /* changement de voix : nouveau modèle */
   piperVoice=voiceId;
   const prog=p=>{if(!p||!p.total)return;
@@ -1018,8 +1052,8 @@ async function wavToMp3(wav){
 async function openaiSpeak(text,c){
   const r=await fetch("https://api.openai.com/v1/audio/speech",{method:"POST",
     headers:{"Authorization":"Bearer "+c.key,"Content-Type":"application/json"},
-    body:JSON.stringify({model:"gpt-4o-mini-tts",voice:c.voice,response_format:"mp3",input:text.slice(0,4000),
-      instructions:"Parle en français de France, avec un ton naturel, chaleureux et posé, comme un collègue d'hôtel qui fait le point à son équipe. Rythme normal, petites pauses entre les parties."})});
+    body:JSON.stringify({model:"gpt-4o-mini-tts",voice:c.voice,speed:Math.max(.7,1/(parseFloat(c.speed)||1)),response_format:"mp3",input:text.slice(0,4000),
+      instructions:"Parle en français de France, avec un ton naturel, chaleureux et posé, comme un collègue d'hôtel qui fait le point à son équipe. Rythme posé, sans te presser, avec une vraie pause entre chaque chambre et chaque partie."})});
   if(!r.ok){let m="";try{m=(await r.json()).error.message}catch(e){}
     throw new Error(r.status===401?"Clé OpenAI refusée":r.status===429?"Quota OpenAI dépassé ou crédit épuisé":m||("Erreur "+r.status))}
   return r.blob();
@@ -1034,7 +1068,7 @@ async function makeVoice(){
   try{
     let blob,ext="mp3",type="audio/mpeg";
     if(pi){
-      const wav=await piperSpeak(text,c.voice.slice(6),step);
+      const wav=await piperSpeak(text,c.voice.slice(6),step,parseFloat(c.speed)||1.2);
       try{step("Conversion en MP3…");blob=await wavToMp3(wav)}catch(e){console.error(e);blob=wav;ext="wav";type="audio/wav"}
     }else blob=await openaiSpeak(text,c);
     const [y,m,d]=repDate.split("-");
@@ -1056,12 +1090,13 @@ async function shareVoice(){
 initVoiceCfg();
 $("recapText").addEventListener("input",()=>{s.recap=$("recapText").value;resetVoiceOut();commit()});
 $("voiceKey").onchange=()=>{const c=voiceCfg();c.key=$("voiceKey").value.trim();saveVoiceCfg(c);if(c.key)toast("Clé enregistrée sur ce téléphone")};
+$("voiceSpeed").onchange=()=>{const c=voiceCfg();c.speed=$("voiceSpeed").value;saveVoiceCfg(c);resetVoiceOut()};
 $("voiceName").onchange=()=>{const c=voiceCfg();c.voice=$("voiceName").value;saveVoiceCfg(c);toggleKeyBox();resetVoiceOut()};
 $("voiceMake").onclick=makeVoice;$("voiceAgain").onclick=makeVoice;
 $("voiceShare").onclick=shareVoice;
 
 /* pour les tests */
-window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,recapPrompt,urlPatch,wavToMp3,piperSpeak,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
+window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,recapPrompt,recapSpoken,spokenText,urlPatch,wavToMp3,piperSpeak,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
