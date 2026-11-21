@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#EDF1EC" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111814" media="(prefers-color-scheme: dark)">
 <title>Rapport de shift</title>
+<script type="importmap">{"imports":{"onnxruntime-web/wasm":"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/esm/ort.wasm.min.js"}}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
@@ -336,20 +337,26 @@ textarea.recap{min-height:260px;background:var(--sheet);border:none;border-radiu
       <details id="voiceCfgBox">
         <summary>Réglages de la voix</summary>
         <div class="inner">
-          <div class="plate-label">Clé OpenAI</div>
-          <input type="text" id="voiceKey" placeholder="sk-…" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <p class="hint" style="margin:6px 0 12px">Gardée seulement sur ce téléphone, jamais synchronisée.</p>
           <div class="plate-label">Voix</div>
           <select id="voiceName">
-            <option value="coral">Coral (femme, chaleureuse)</option>
-            <option value="nova">Nova (femme, claire)</option>
-            <option value="shimmer">Shimmer (femme, douce)</option>
-            <option value="sage">Sage (femme, posée)</option>
-            <option value="ash">Ash (homme, naturel)</option>
-            <option value="onyx">Onyx (homme, grave)</option>
-            <option value="echo">Echo (homme, neutre)</option>
-            <option value="verse">Verse (homme, expressif)</option>
+            <optgroup label="Gratuit, fabriqué sur le téléphone">
+              <option value="piper:fr_FR-siwis-medium">Siwis (femme)</option>
+              <option value="piper:fr_FR-tom-medium">Tom (homme)</option>
+            </optgroup>
+            <optgroup label="OpenAI, plus naturel (clé payante)">
+              <option value="coral">Coral (femme, chaleureuse)</option>
+              <option value="nova">Nova (femme, claire)</option>
+              <option value="sage">Sage (femme, posée)</option>
+              <option value="ash">Ash (homme, naturel)</option>
+              <option value="onyx">Onyx (homme, grave)</option>
+            </optgroup>
           </select>
+          <p class="hint" id="piperHint" style="margin:6px 0 0">La 1re fois, la voix se télécharge (≈ 60 Mo, plutôt en Wi-Fi). Ensuite c'est plus rapide.</p>
+          <div id="keyBox" class="hidden" style="margin-top:12px">
+            <div class="plate-label">Clé OpenAI</div>
+            <input type="text" id="voiceKey" placeholder="sk-…" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <p class="hint" style="margin:6px 0 0">Gardée seulement sur ce téléphone, jamais synchronisée.</p>
+          </div>
         </div>
       </details>
     </div>
@@ -920,7 +927,9 @@ showTab((location.hash||"").replace("#",""));
    puis partagé en fichier audio (menu Partager → WhatsApp → la personne).
    La clé reste dans ce navigateur (localStorage), elle n'est jamais envoyée à Firebase. */
 const VOICE_KEY="rapportShift_voice_v1";
-function voiceCfg(){try{return Object.assign({key:"",voice:"coral"},JSON.parse(localStorage.getItem(VOICE_KEY)||"{}"))}catch(e){return{key:"",voice:"coral"}}}
+const PIPER_DEFAULT="piper:fr_FR-siwis-medium";
+function voiceCfg(){let c={key:"",voice:PIPER_DEFAULT};try{c=Object.assign(c,JSON.parse(localStorage.getItem(VOICE_KEY)||"{}"))}catch(e){}
+  return c}
 function saveVoiceCfg(c){try{localStorage.setItem(VOICE_KEY,JSON.stringify(c))}catch(e){}}
 
 /* rend lisible à l'oral : #3 → chambre 3, pax → personnes, 9h30 → 9 heures 30, sans emojis ni puces */
@@ -932,6 +941,7 @@ function oral(t){
     .replace(/\b1\s*pax\b/gi,"1 personne").replace(/(\d+)\s*pax\b/gi,"$1 personnes").replace(/\bpax\b/gi,"personnes")
     .replace(/\bPDJ\b/gi,"petit-déjeuner").replace(/\bMÀB\b|\bMAB\b/gi,"mises à blanc")
     .replace(/\b(\d{1,2})h(\d{2})\b/g,"$1 heures $2").replace(/\b(\d{1,2})h\b/g,"$1 heures")
+    .replace(/(\d+),(\d{2})\s*€/g,"$1 euros $2").replace(/€/g,"euros")
     .replace(/ heures 00\b/g," heures")
     .replace(/(\d+[,.]?\d*)\s*°C/g,"$1 degrés").replace(/\s*&\s*/g," et ").replace(/(^|\s)\+\s*(?=\d)/g,"$1plus ")
     .replace(/([.!?]\s+)([a-zà-ÿ])/g,(_,p,c)=>p+c.toUpperCase())
@@ -974,25 +984,64 @@ const spokenText=()=>oral(s.recap.trim()?s.recap:spokenReport());
 
 let voiceFile=null,voiceUrl=null;
 function resetVoiceOut(){voiceFile=null;if(voiceUrl){URL.revokeObjectURL(voiceUrl);voiceUrl=null}$("voiceAudio").removeAttribute("src");$("voiceOut").classList.add("hidden")}
-function initVoiceCfg(){const c=voiceCfg();$("voiceKey").value=c.key;$("voiceName").value=c.voice;$("voiceCfgBox").open=!c.key}
+function toggleKeyBox(){const pi=$("voiceName").value.startsWith("piper:");$("keyBox").classList.toggle("hidden",pi);$("piperHint").classList.toggle("hidden",!pi)}
+function initVoiceCfg(){const c=voiceCfg();
+  if(!c.voice.startsWith("piper:")&&!c.key){c.voice=PIPER_DEFAULT;saveVoiceCfg(c)}   /* voix OpenAI sans clé : voix gratuite */
+  $("voiceName").value=c.voice;$("voiceKey").value=c.key;toggleKeyBox();$("voiceCfgBox").open=false}
+
+/* --- voix gratuite : Piper, calculée sur le téléphone (WebAssembly), puis convertie en MP3 --- */
+const PIPER_LIB="https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web@1.0.5/dist/piper-tts-web.js";
+const LAME_LIB="https://cdn.jsdelivr.net/npm/@breezystack/lamejs@1.2.7/dist/lamejs.js";
+let piperMod=null,piperVoice=null;
+async function piperSpeak(text,voiceId,onStep){
+  const tts=piperMod||(piperMod=await import(PIPER_LIB));
+  if(piperVoice!==voiceId)tts.TtsSession._instance=null;   /* changement de voix : nouveau modèle */
+  piperVoice=voiceId;
+  const prog=p=>{if(!p||!p.total)return;
+    if(p.url===tts.INFERENCE_PROGRESS_URL)onStep(`Création du vocal… ${Math.min(p.loaded+1,p.total)}/${p.total}`);
+    else if(/\.onnx$/.test(p.url))onStep(`Téléchargement de la voix… ${Math.round(p.loaded*100/p.total)} %`)};
+  try{
+    const session=new tts.TtsSession({voiceId,progress:prog});
+    await session.waitReady;onStep("Création du vocal…");
+    return await session.predict(text);
+  }catch(e){tts.TtsSession._instance=null;piperVoice=null;throw e}
+}
+async function wavToMp3(wav){
+  const {Mp3Encoder}=await import(LAME_LIB);
+  const buf=await wav.arrayBuffer(),v=new DataView(buf),rate=v.getUint32(24,true);
+  const pcm=new Int16Array(buf,44,(buf.byteLength-44)>>1);
+  const enc=new Mp3Encoder(1,rate,64),out=[];
+  for(let i=0;i<pcm.length;i+=1152){const c=enc.encodeBuffer(pcm.subarray(i,i+1152));if(c.length)out.push(new Uint8Array(c))}
+  const end=enc.flush();if(end.length)out.push(new Uint8Array(end));
+  return new Blob(out,{type:"audio/mpeg"});
+}
+async function openaiSpeak(text,c){
+  const r=await fetch("https://api.openai.com/v1/audio/speech",{method:"POST",
+    headers:{"Authorization":"Bearer "+c.key,"Content-Type":"application/json"},
+    body:JSON.stringify({model:"gpt-4o-mini-tts",voice:c.voice,response_format:"mp3",input:text.slice(0,4000),
+      instructions:"Parle en français de France, avec un ton naturel, chaleureux et posé, comme un collègue d'hôtel qui fait le point à son équipe. Rythme normal, petites pauses entre les parties."})});
+  if(!r.ok){let m="";try{m=(await r.json()).error.message}catch(e){}
+    throw new Error(r.status===401?"Clé OpenAI refusée":r.status===429?"Quota OpenAI dépassé ou crédit épuisé":m||("Erreur "+r.status))}
+  return r.blob();
+}
 async function makeVoice(){
   const c=voiceCfg(),text=spokenText().trim();
   if(!text){toast("Rien à lire");return}
-  if(!c.key){$("voiceCfgBox").open=true;$("voiceKey").focus();toast("Ajoute d'abord ta clé OpenAI");return}
-  const b=$("voiceMake");b.disabled=true;b.textContent="Création du vocal…";$("voiceAgain").disabled=true;resetVoiceOut();
+  const pi=c.voice.startsWith("piper:");
+  if(!pi&&!c.key){$("voiceCfgBox").open=true;toggleKeyBox();$("voiceKey").focus();toast("Ajoute ta clé OpenAI ou choisis une voix gratuite");return}
+  const b=$("voiceMake");b.disabled=true;$("voiceAgain").disabled=true;resetVoiceOut();
+  const step=t=>{b.textContent=t};step(pi?"Préparation de la voix…":"Création du vocal…");
   try{
-    const r=await fetch("https://api.openai.com/v1/audio/speech",{method:"POST",
-      headers:{"Authorization":"Bearer "+c.key,"Content-Type":"application/json"},
-      body:JSON.stringify({model:"gpt-4o-mini-tts",voice:c.voice,response_format:"mp3",input:text.slice(0,4000),
-        instructions:"Parle en français de France, avec un ton naturel, chaleureux et posé, comme un collègue d'hôtel qui fait le point de fin de journée à son équipe. Rythme normal, petites pauses entre les parties."})});
-    if(!r.ok){let m="";try{m=(await r.json()).error.message}catch(e){}
-      throw new Error(r.status===401?"Clé OpenAI refusée":r.status===429?"Quota OpenAI dépassé ou crédit épuisé":m||("Erreur "+r.status))}
-    const blob=await r.blob();
+    let blob,ext="mp3",type="audio/mpeg";
+    if(pi){
+      const wav=await piperSpeak(text,c.voice.slice(6),step);
+      try{step("Conversion en MP3…");blob=await wavToMp3(wav)}catch(e){console.error(e);blob=wav;ext="wav";type="audio/wav"}
+    }else blob=await openaiSpeak(text,c);
     const [y,m,d]=repDate.split("-");
-    voiceFile=new File([blob],`Recap-${d}-${m}.mp3`,{type:"audio/mpeg"});
+    voiceFile=new File([blob],`Recap-${d}-${m}.${ext}`,{type});
     voiceUrl=URL.createObjectURL(blob);$("voiceAudio").src=voiceUrl;
     $("voiceOut").classList.remove("hidden");toast("Vocal prêt ✓");
-  }catch(e){console.error(e);toast(e&&e.message&&!/fetch/i.test(e.message)?e.message:"Vocal impossible : vérifie la connexion")}
+  }catch(e){console.error(e);toast(e&&e.message&&/OpenAI|Quota|Erreur/.test(e.message)?e.message:"Vocal impossible : vérifie la connexion et réessaie")}
   finally{b.disabled=false;$("voiceAgain").disabled=false;b.textContent="🎙️ Créer le vocal"}
 }
 /* le partage doit partir directement du toucher (iPhone) : le fichier est donc préparé avant */
@@ -1007,12 +1056,12 @@ async function shareVoice(){
 initVoiceCfg();
 $("recapText").addEventListener("input",()=>{s.recap=$("recapText").value;resetVoiceOut();commit()});
 $("voiceKey").onchange=()=>{const c=voiceCfg();c.key=$("voiceKey").value.trim();saveVoiceCfg(c);if(c.key)toast("Clé enregistrée sur ce téléphone")};
-$("voiceName").onchange=()=>{const c=voiceCfg();c.voice=$("voiceName").value;saveVoiceCfg(c);resetVoiceOut()};
+$("voiceName").onchange=()=>{const c=voiceCfg();c.voice=$("voiceName").value;saveVoiceCfg(c);toggleKeyBox();resetVoiceOut()};
 $("voiceMake").onclick=makeVoice;$("voiceAgain").onclick=makeVoice;
 $("voiceShare").onclick=shareVoice;
 
 /* pour les tests */
-window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,recapPrompt,urlPatch,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
+window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,recapPrompt,urlPatch,wavToMp3,piperSpeak,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
