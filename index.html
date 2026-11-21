@@ -141,11 +141,26 @@ details[open]>summary::after{content:" –"}
 
 /* barre d'actions en bas */
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--sheet);border-top:1px solid var(--line);padding:10px 14px calc(10px + var(--safe-b))}
-.bar .wrap{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px;padding:0}
-.bar button,.bar a{border:none;border-radius:12px;padding:13px 6px;font-weight:700;font-size:15px;text-align:center;text-decoration:none}
-.bar .b-copy,.bar .b-print{background:var(--bois-pale);color:var(--bois)}
+.bar .wrap{display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:6px;padding:0}
+.bar button,.bar a{border:none;border-radius:12px;padding:13px 4px;font-weight:700;font-size:15px;text-align:center;text-decoration:none}
+.bar .b-copy,.bar .b-print,.bar .b-voice{background:var(--bois-pale);color:var(--bois)}
 .bar .b-wa{background:var(--wa);color:#fff}
-@media (prefers-color-scheme:dark){.bar .b-copy,.bar .b-print{color:var(--ink)}}
+@media (prefers-color-scheme:dark){.bar .b-copy,.bar .b-print,.bar .b-voice{color:var(--ink)}}
+
+/* feuille « Vocal » : texte lu, voix, envoi */
+.sheet-bg{position:fixed;inset:0;z-index:50;background:rgba(10,16,12,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--page);width:100%;max-width:620px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 14px calc(16px + var(--safe-b))}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sheet-head h2{font-size:19px}
+.sheet-head button{border:none;background:none;font-size:26px;color:var(--soft);width:36px;height:36px}
+.sheet .sec{margin-top:14px}
+.sheet textarea{min-height:200px;background:var(--sheet)}
+.sheet audio{width:100%;margin-top:4px}
+.sheet .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.btn.main{background:var(--bois);color:var(--sheet)}
+.btn.wa{background:var(--wa);color:#fff}
+.btn:disabled{opacity:.5}
+@media (prefers-color-scheme:dark){.btn.main{color:#0E1611}}
 
 .toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-b));transform:translate(-50%,10px);background:var(--ink);color:var(--page);padding:10px 16px;border-radius:999px;
   font-size:15px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
@@ -298,8 +313,55 @@ details[open]>summary::after{content:" –"}
 <div class="bar"><div class="wrap">
   <button class="b-copy" id="copy">Copier</button>
   <button class="b-print" id="printBtn">Imprimer</button>
+  <button class="b-voice" id="voiceBtn">🎙️ Vocal</button>
   <a class="b-wa" id="wa" href="#" target="_blank" rel="noopener">WhatsApp</a>
 </div></div>
+
+<!-- feuille « Vocal » -->
+<div class="sheet-bg hidden" id="voiceSheet">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="voiceTitle">
+    <div class="sheet-head"><h2 id="voiceTitle">Vocal WhatsApp</h2><button type="button" id="voiceClose" aria-label="Fermer">×</button></div>
+    <section class="sec" style="margin-top:0">
+      <h2>Texte lu <small>modifiable</small></h2>
+      <textarea id="voiceText" spellcheck="false"></textarea>
+      <button class="addnote" id="voiceRegen" type="button">↺ Refaire le texte depuis le rapport</button>
+    </section>
+    <section class="sec">
+      <button class="btn main" id="voiceMake" type="button">Créer le vocal</button>
+      <div id="voiceOut" class="hidden" style="margin-top:10px">
+        <audio id="voiceAudio" controls preload="auto"></audio>
+        <div class="row2">
+          <button class="btn ghost" id="voiceAgain" type="button">Refaire</button>
+          <button class="btn wa" id="voiceShare" type="button">Envoyer</button>
+        </div>
+        <p class="hint" style="margin-top:8px">« Envoyer » ouvre le menu Partager : choisis WhatsApp puis la personne.</p>
+      </div>
+    </section>
+    <section class="sec">
+      <div class="group">
+        <details id="voiceCfgBox">
+          <summary>Réglages de la voix</summary>
+          <div class="inner">
+            <div class="plate-label">Clé OpenAI</div>
+            <input type="text" id="voiceKey" placeholder="sk-…" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <p class="hint" style="margin:6px 0 12px">Gardée seulement sur ce téléphone, jamais synchronisée.</p>
+            <div class="plate-label">Voix</div>
+            <select id="voiceName">
+              <option value="coral">Coral (femme, chaleureuse)</option>
+              <option value="nova">Nova (femme, claire)</option>
+              <option value="shimmer">Shimmer (femme, douce)</option>
+              <option value="sage">Sage (femme, posée)</option>
+              <option value="ash">Ash (homme, naturel)</option>
+              <option value="onyx">Onyx (homme, grave)</option>
+              <option value="echo">Echo (homme, neutre)</option>
+              <option value="verse">Verse (homme, expressif)</option>
+            </select>
+          </div>
+        </details>
+      </div>
+    </section>
+  </div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 <div id="printArea"></div>
 
@@ -821,8 +883,113 @@ if(patch){
 }else{renderAll();startSync()}
 showTab((location.hash||"").replace("#",""));
 
+/* ---------- vocal WhatsApp ----------
+   Le rapport est réécrit en phrases parlées, lu par la voix OpenAI (gpt-4o-mini-tts),
+   puis partagé en fichier audio (menu Partager → WhatsApp → la personne).
+   La clé reste dans ce navigateur (localStorage), elle n'est jamais envoyée à Firebase. */
+const VOICE_KEY="rapportShift_voice_v1";
+function voiceCfg(){try{return Object.assign({key:"",voice:"coral"},JSON.parse(localStorage.getItem(VOICE_KEY)||"{}"))}catch(e){return{key:"",voice:"coral"}}}
+function saveVoiceCfg(c){try{localStorage.setItem(VOICE_KEY,JSON.stringify(c))}catch(e){}}
+
+/* rend lisible à l'oral : #3 → chambre 3, pax → personnes, 9h30 → 9 heures 30, sans emojis ni puces */
+function oral(t){
+  return String(t||"")
+    .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu,"")
+    .replace(/^\s*[-*•]\s*/gm,"")
+    .replace(/#\s*(\d+)/g,"chambre $1")
+    .replace(/\b1\s*pax\b/gi,"1 personne").replace(/(\d+)\s*pax\b/gi,"$1 personnes").replace(/\bpax\b/gi,"personnes")
+    .replace(/\bPDJ\b/gi,"petit-déjeuner").replace(/\bMÀB\b|\bMAB\b/gi,"mises à blanc")
+    .replace(/\b(\d{1,2})h(\d{2})\b/g,"$1 heures $2").replace(/\b(\d{1,2})h\b/g,"$1 heures")
+    .replace(/ heures 00\b/g," heures")
+    .replace(/(\d+[,.]?\d*)\s*°C/g,"$1 degrés").replace(/\s*&\s*/g," et ").replace(/(^|\s)\+\s*(?=\d)/g,"$1plus ")
+    .replace(/([.!?]\s+)([a-zà-ÿ])/g,(_,p,c)=>p+c.toUpperCase())
+    .replace(/[ \t]+$/gm,"");
+}
+const chambres=a=>{const l=sortRooms(a.map(String));if(!l.length)return"";const t=l.length===1?l[0]:l.slice(0,-1).join(", ")+" et "+l[l.length-1];return(l.length>1?"chambres ":"chambre ")+t};
+const PAROLE={"A voir":"à voir","A faire":"à faire","Fait":"fait"};
+/* le rapport du soir, raconté comme un collègue au téléphone */
+function spokenReport(){
+  const [y,m,d]=repDate.split("-").map(Number);
+  const jour=new Date(y,m-1,d).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  const P=[`Salut à tous, voici le rapport de shift du ${jour}.`];
+  const tasks=TASKS.filter(t=>s.tasks[t]!=="/").map(t=>`${t} : ${PAROLE[s.tasks[t]]||s.tasks[t]}${s.taskNotes[t]&&s.taskNotes[t].trim()?", "+s.taskNotes[t].trim():""}`);
+  if(tasks.length)P.push("Côté tâches. "+tasks.join(". ")+".");
+  const ast=s.ast.filter(a=>a.room);
+  if(ast.length)P.push(`Pour l'astreinte, ${ast.length} chambre${ast.length>1?"s":""} occupée${ast.length>1?"s":""} cette nuit : `+
+    ast.map(a=>`la ${a.room} avec ${parseInt(a.pax)||0} pax${a.note&&a.note.trim()?" "+a.note.trim():""}`).join(", ")+".");
+  else P.push("Pour l'astreinte, aucune chambre occupée cette nuit.");
+  const net=[];
+  if(s.mab.length){
+    const todo=s.mab.filter(n=>!s.mabDone.includes(n)),done=s.mab.filter(n=>s.mabDone.includes(n));
+    net.push(done.length?`mises à blanc : ${chambres(done)} déjà ${done.length>1?"faites":"faite"}${todo.length?", il reste "+chambres(todo):""}`:`mises à blanc : ${chambres(todo)}`);
+    if(s.mabNote.trim())net.push(s.mabNote.trim());
+  }
+  if(s.arr.length)net.push(`arrivées : ${chambres(s.arr)}${s.arrNote.trim()?", "+s.arrNote.trim():""}`);
+  if(s.rec.length)net.push(`recouche : ${chambres(s.rec)}${s.recNote.trim()?", "+s.recNote.trim():""}`);
+  if(net.length||s.netNote.trim())P.push("Pour le ménage de demain. "+[s.netNote.trim(),...net].filter(Boolean).join(". ")+".");
+  const pax=parseInt(s.pdjPax)||0;
+  if(pax){const tb=s.pdjTables.split("\n").map(x=>x.trim()).filter(Boolean);
+    P.push(`Demain matin, ${pax} pax au petit-déjeuner${tb.length?" : "+tb.join(", "):""}.`)}
+  else P.push("Pas de petit-déjeuner demain matin.");
+  const prec=[];
+  if(s.strip.length)prec.push(`Destripage : il manque ${chambres(s.strip)}.`);
+  if(s.notes.trim())prec.push(s.notes.trim());
+  if(prec.length)P.push("Quelques précisions.\n"+prec.join("\n"));
+  P.push("Voilà, bonne soirée à tous !");
+  return oral(P.join("\n\n"));
+}
+const spokenText=()=>tab==="pdj"?oral("Petit-déjeuner de demain.\n"+pdjText()):tab==="commande"?oral(buildOrder()):spokenReport();
+
+let voiceFile=null,voiceUrl=null;
+function resetVoiceOut(){voiceFile=null;if(voiceUrl){URL.revokeObjectURL(voiceUrl);voiceUrl=null}$("voiceAudio").removeAttribute("src");$("voiceOut").classList.add("hidden")}
+function openVoice(){
+  const c=voiceCfg();$("voiceKey").value=c.key;$("voiceName").value=c.voice;
+  $("voiceCfgBox").open=!c.key;
+  $("voiceText").value=spokenText();resetVoiceOut();
+  $("voiceSheet").classList.remove("hidden");document.body.style.overflow="hidden";
+}
+function closeVoice(){$("voiceSheet").classList.add("hidden");document.body.style.overflow="";try{$("voiceAudio").pause()}catch(e){}}
+async function makeVoice(){
+  const c=voiceCfg(),text=$("voiceText").value.trim();
+  if(!text){toast("Rien à lire");return}
+  if(!c.key){$("voiceCfgBox").open=true;$("voiceKey").focus();toast("Ajoute d'abord ta clé OpenAI");return}
+  const b=$("voiceMake");b.disabled=true;b.textContent="Création du vocal…";resetVoiceOut();
+  try{
+    const r=await fetch("https://api.openai.com/v1/audio/speech",{method:"POST",
+      headers:{"Authorization":"Bearer "+c.key,"Content-Type":"application/json"},
+      body:JSON.stringify({model:"gpt-4o-mini-tts",voice:c.voice,response_format:"mp3",input:text.slice(0,4000),
+        instructions:"Parle en français de France, avec un ton naturel, chaleureux et posé, comme un collègue d'hôtel qui fait le point de fin de journée à son équipe. Rythme normal, petites pauses entre les parties."})});
+    if(!r.ok){let m="";try{m=(await r.json()).error.message}catch(e){}
+      throw new Error(r.status===401?"Clé OpenAI refusée":r.status===429?"Quota OpenAI dépassé ou crédit épuisé":m||("Erreur "+r.status))}
+    const blob=await r.blob();
+    const [y,m,d]=repDate.split("-");
+    voiceFile=new File([blob],`Rapport-${d}-${m}.mp3`,{type:"audio/mpeg"});
+    voiceUrl=URL.createObjectURL(blob);$("voiceAudio").src=voiceUrl;
+    $("voiceOut").classList.remove("hidden");toast("Vocal prêt ✓");
+  }catch(e){console.error(e);toast(e&&e.message&&!/fetch/i.test(e.message)?e.message:"Vocal impossible : vérifie la connexion")}
+  finally{b.disabled=false;b.textContent="Créer le vocal"}
+}
+/* le partage doit partir directement du toucher (iPhone) : le fichier est donc préparé avant */
+async function shareVoice(){
+  if(!voiceFile){toast("Crée d'abord le vocal");return}
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[voiceFile]}))await navigator.share({files:[voiceFile]});
+    else{const a=document.createElement("a");a.href=voiceUrl;a.download=voiceFile.name;document.body.appendChild(a);a.click();a.remove();
+      toast("Fichier téléchargé : envoie-le dans WhatsApp")}
+  }catch(e){if(e&&e.name==="AbortError")return;console.error(e);toast("Partage impossible ici")}
+}
+$("voiceBtn").onclick=openVoice;
+$("voiceClose").onclick=closeVoice;
+$("voiceSheet").addEventListener("click",e=>{if(e.target===$("voiceSheet"))closeVoice()});
+$("voiceRegen").onclick=()=>{$("voiceText").value=spokenText();resetVoiceOut();toast("Texte refait")};
+$("voiceText").oninput=resetVoiceOut;
+$("voiceKey").onchange=()=>{const c=voiceCfg();c.key=$("voiceKey").value.trim();saveVoiceCfg(c);if(c.key)toast("Clé enregistrée sur ce téléphone")};
+$("voiceName").onchange=()=>{const c=voiceCfg();c.voice=$("voiceName").value;saveVoiceCfg(c);resetVoiceOut()};
+$("voiceMake").onclick=makeVoice;$("voiceAgain").onclick=makeVoice;
+$("voiceShare").onclick=shareVoice;
+
 /* pour les tests */
-window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
+window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
