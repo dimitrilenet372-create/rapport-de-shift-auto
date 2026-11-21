@@ -53,8 +53,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .dot.ok{background:var(--mousse)}.dot.err{background:var(--brique)}
 .reset{border:1px solid var(--line);background:var(--sheet);border-radius:999px;padding:7px 12px;font-size:14px;color:var(--soft);white-space:nowrap;flex:none}
 .reset.armed{border-color:var(--brique);color:var(--brique);font-weight:700}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);background:var(--bois-pale);border-radius:12px;padding:3px}
-.tabs button{border:none;background:none;padding:9px 4px;border-radius:9px;font-size:15px;font-weight:700;color:var(--soft)}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--bois-pale);border-radius:12px;padding:3px}
+.tabs button{border:none;background:none;padding:9px 2px;border-radius:9px;font-size:14.5px;font-weight:700;color:var(--soft)}
 .tabs button.on{background:var(--sheet);color:var(--bois);box-shadow:0 1px 2px rgba(23,32,27,.12)}
 @media (prefers-color-scheme:dark){.tabs button.on{color:var(--ink)}}
 
@@ -141,22 +141,17 @@ details[open]>summary::after{content:" –"}
 
 /* barre d'actions en bas */
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--sheet);border-top:1px solid var(--line);padding:10px 14px calc(10px + var(--safe-b))}
-.bar .wrap{display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:6px;padding:0}
-.bar button,.bar a{border:none;border-radius:12px;padding:13px 4px;font-weight:700;font-size:15px;text-align:center;text-decoration:none}
-.bar .b-copy,.bar .b-print,.bar .b-voice{background:var(--bois-pale);color:var(--bois)}
+.bar .wrap{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px;padding:0}
+.bar button,.bar a{border:none;border-radius:12px;padding:13px 6px;font-weight:700;font-size:15px;text-align:center;text-decoration:none}
+.bar .b-copy,.bar .b-print{background:var(--bois-pale);color:var(--bois)}
 .bar .b-wa{background:var(--wa);color:#fff}
-@media (prefers-color-scheme:dark){.bar .b-copy,.bar .b-print,.bar .b-voice{color:var(--ink)}}
+@media (prefers-color-scheme:dark){.bar .b-copy,.bar .b-print{color:var(--ink)}}
 
-/* feuille « Vocal » : texte lu, voix, envoi */
-.sheet-bg{position:fixed;inset:0;z-index:50;background:rgba(10,16,12,.45);display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--page);width:100%;max-width:620px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 14px calc(16px + var(--safe-b))}
-.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.sheet-head h2{font-size:19px}
-.sheet-head button{border:none;background:none;font-size:26px;color:var(--soft);width:36px;height:36px}
-.sheet .sec{margin-top:14px}
-.sheet textarea{min-height:200px;background:var(--sheet)}
-.sheet audio{width:100%;margin-top:4px}
-.sheet .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+/* onglet Récap : texte du topo + vocal */
+textarea.recap{min-height:260px;background:var(--sheet);border:none;border-radius:0;line-height:1.5}
+.recap-when{padding:9px 14px;border-top:1px solid var(--line);font-size:14px;color:var(--soft)}
+#voiceAudio{width:100%;margin-top:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .btn.main{background:var(--bois);color:var(--sheet)}
 .btn.wa{background:var(--wa);color:#fff}
 .btn:disabled{opacity:.5}
@@ -193,6 +188,7 @@ details[open]>summary::after{content:" –"}
       <button data-tab="rapport">Rapport</button>
       <button data-tab="pdj">Petit-déj</button>
       <button data-tab="commande">Commande</button>
+      <button data-tab="recap">Récap</button>
     </nav>
   </div>
 </div>
@@ -308,60 +304,66 @@ details[open]>summary::after{content:" –"}
     <div class="group"><pre id="orderPreview"></pre></div>
   </section>
 </div>
+
+<!-- ========== RÉCAP ========== -->
+<div id="tab-recap" class="hidden">
+  <div class="claude">
+    <a id="recapClaudeBtn" href="https://claude.ai/new" target="_blank" rel="noopener">Faire le récap avec Claude</a>
+    <span></span>
+    <p>Claude lit Asterio sur le Mac et remplit ce récap. Automatique à 15h10 (lun, mar, ven, sam, dim).</p>
+  </div>
+  <section class="sec">
+    <h2>Récap du jour <small>modifiable</small></h2>
+    <div class="group">
+      <textarea id="recapText" class="recap" placeholder="Le récap d'Asterio arrive ici (chambres occupées, arrivées, points d'attention, demain…)"></textarea>
+      <div class="recap-when" id="recapWhen"></div>
+    </div>
+  </section>
+  <section class="sec">
+    <h2>Vocal WhatsApp <small>lit le récap</small></h2>
+    <button class="btn main" id="voiceMake" type="button">🎙️ Créer le vocal</button>
+    <div id="voiceOut" class="hidden">
+      <audio id="voiceAudio" controls preload="auto"></audio>
+      <div class="row2">
+        <button class="btn ghost" id="voiceAgain" type="button">Refaire</button>
+        <button class="btn wa" id="voiceShare" type="button">Envoyer</button>
+      </div>
+      <p class="hint" style="margin:8px 4px 0">« Envoyer » ouvre le menu Partager : choisis WhatsApp puis la personne.</p>
+    </div>
+  </section>
+  <section class="sec">
+    <div class="group">
+      <details id="voiceCfgBox">
+        <summary>Réglages de la voix</summary>
+        <div class="inner">
+          <div class="plate-label">Clé OpenAI</div>
+          <input type="text" id="voiceKey" placeholder="sk-…" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <p class="hint" style="margin:6px 0 12px">Gardée seulement sur ce téléphone, jamais synchronisée.</p>
+          <div class="plate-label">Voix</div>
+          <select id="voiceName">
+            <option value="coral">Coral (femme, chaleureuse)</option>
+            <option value="nova">Nova (femme, claire)</option>
+            <option value="shimmer">Shimmer (femme, douce)</option>
+            <option value="sage">Sage (femme, posée)</option>
+            <option value="ash">Ash (homme, naturel)</option>
+            <option value="onyx">Onyx (homme, grave)</option>
+            <option value="echo">Echo (homme, neutre)</option>
+            <option value="verse">Verse (homme, expressif)</option>
+          </select>
+        </div>
+      </details>
+    </div>
+  </section>
+</div>
 </main>
 
 <div class="bar"><div class="wrap">
   <button class="b-copy" id="copy">Copier</button>
   <button class="b-print" id="printBtn">Imprimer</button>
-  <button class="b-voice" id="voiceBtn">🎙️ Vocal</button>
   <a class="b-wa" id="wa" href="#" target="_blank" rel="noopener">WhatsApp</a>
 </div></div>
 
-<!-- feuille « Vocal » -->
-<div class="sheet-bg hidden" id="voiceSheet">
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="voiceTitle">
-    <div class="sheet-head"><h2 id="voiceTitle">Vocal WhatsApp</h2><button type="button" id="voiceClose" aria-label="Fermer">×</button></div>
-    <section class="sec" style="margin-top:0">
-      <h2>Texte lu <small>modifiable</small></h2>
-      <textarea id="voiceText" spellcheck="false"></textarea>
-      <button class="addnote" id="voiceRegen" type="button">↺ Refaire le texte depuis le rapport</button>
-    </section>
-    <section class="sec">
-      <button class="btn main" id="voiceMake" type="button">Créer le vocal</button>
-      <div id="voiceOut" class="hidden" style="margin-top:10px">
-        <audio id="voiceAudio" controls preload="auto"></audio>
-        <div class="row2">
-          <button class="btn ghost" id="voiceAgain" type="button">Refaire</button>
-          <button class="btn wa" id="voiceShare" type="button">Envoyer</button>
-        </div>
-        <p class="hint" style="margin-top:8px">« Envoyer » ouvre le menu Partager : choisis WhatsApp puis la personne.</p>
-      </div>
-    </section>
-    <section class="sec">
-      <div class="group">
-        <details id="voiceCfgBox">
-          <summary>Réglages de la voix</summary>
-          <div class="inner">
-            <div class="plate-label">Clé OpenAI</div>
-            <input type="text" id="voiceKey" placeholder="sk-…" autocomplete="off" autocapitalize="off" spellcheck="false">
-            <p class="hint" style="margin:6px 0 12px">Gardée seulement sur ce téléphone, jamais synchronisée.</p>
-            <div class="plate-label">Voix</div>
-            <select id="voiceName">
-              <option value="coral">Coral (femme, chaleureuse)</option>
-              <option value="nova">Nova (femme, claire)</option>
-              <option value="shimmer">Shimmer (femme, douce)</option>
-              <option value="sage">Sage (femme, posée)</option>
-              <option value="ash">Ash (homme, naturel)</option>
-              <option value="onyx">Onyx (homme, grave)</option>
-              <option value="echo">Echo (homme, neutre)</option>
-              <option value="verse">Verse (homme, expressif)</option>
-            </select>
-          </div>
-        </details>
-      </div>
-    </section>
-  </div>
-</div>
+
 <div class="toast" id="toast" role="status"></div>
 <div id="printArea"></div>
 
@@ -376,7 +378,7 @@ const STATES=["/","A voir","A faire","Fait"];
 const KEY="rapportShift_v1";
 const blankTasks=()=>Object.fromEntries(TASKS.map(t=>[t,"/"]));
 const blankNotes=()=>Object.fromEntries(TASKS.map(t=>[t,""]));
-const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabDone:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30",pdjList:[],pdjText:""});
+const blank=()=>({tasks:blankTasks(),taskNotes:blankNotes(),ast:[],netNote:"",mab:[],mabDone:[],mabNote:"",arr:[],arrNote:"",rec:[],recNote:"",pdjPax:"",pdjTables:"",strip:[],notes:"",orderOv:{},orderTime:"7h30",pdjList:[],pdjText:"",recap:"",recapAt:0});
 let rooms=["1","2","3","4","5","6","7","8","9","10"];
 let s=blank();
 let updated=0;
@@ -408,7 +410,7 @@ function clean(x){
     orderOv:Object.fromEntries(Object.entries(x.orderOv||{}).filter(([k,v])=>PRODUCTS.some(p=>p.k===k)&&v!==""&&v!==null).map(([k,v])=>[k,String(v)])),
     orderTime:x.orderTime||"7h30",
     pdjList:arr(x.pdjList).filter(a=>a&&a.room).map(a=>({room:String(a.room),pax:String(a.pax??""),note:String(a.note||"")})),
-    pdjText:String(x.pdjText||"")};
+    pdjText:String(x.pdjText||""),recap:String(x.recap||""),recapAt:Number(x.recapAt)||0};
 }
 const DEFAULT_NOTES=`- La #3 partira à 14h00 maximum
 
@@ -618,7 +620,7 @@ function parsePdjList(txt){
   return out;
 }
 
-const TABS=["rapport","pdj","commande"];
+const TABS=["rapport","pdj","commande","recap"];
 function showTab(t){
   tab=TABS.includes(t)?t:"rapport";
   TABS.forEach(x=>$("tab-"+x).classList.toggle("hidden",x!==tab));
@@ -659,7 +661,7 @@ function build(){
   L.push(...P,"","Bonne soirée à tous 😊");
   return L.join("\n");
 }
-const tabText=()=>tab==="pdj"?pdjText():tab==="commande"?buildOrder():build();
+const tabText=()=>tab==="pdj"?pdjText():tab==="commande"?buildOrder():tab==="recap"?s.recap.trim():build();
 function refresh(){
   $("preview").textContent=build();
   if(document.activeElement!==$("pdjPreview")){$("pdjPreview").value=pdjText();if(tab==="pdj")fitBubble()}
@@ -667,6 +669,8 @@ function refresh(){
   $("pdjAuto").classList.toggle("hidden",!s.pdjText||pdjText()===buildPdj());
   $("pdjDateLbl").textContent=courte(repDate);
   refreshOrder();
+  if(document.activeElement!==$("recapText"))$("recapText").value=s.recap;
+  $("recapWhen").textContent=s.recapAt?"Reçu de Claude "+new Date(s.recapAt).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"";
   const t=tabText();
   $("wa").href=t?"https://api.whatsapp.com/send?text="+encodeURIComponent(t):"#";
 }
@@ -683,7 +687,7 @@ function push(extra){
   catch(e){console.error(e);setSync("⚠️ Synchro impossible");return Promise.resolve()}
 }
 function applyRemote(r){s=clean(Object.assign({},r.s,{perm:r.perm}));if(r.rooms)rooms=arr(r.rooms).map(String);updated=r.updated||0;saveLocal();renderAll()}
-function showBanner(){const b=$("banner");b.classList.add("show");setTimeout(()=>b.classList.remove("show"),8000)}
+function showBanner(txt){const b=$("banner");b.textContent=txt||"Rapport reçu de Claude ✓";b.classList.add("show");setTimeout(()=>b.classList.remove("show"),8000)}
 function startSync(onReady){
   try{
     const app=initializeApp({
@@ -706,7 +710,7 @@ function startSync(onReady){
         else if(!r||updated>ru)push();
         else{if(ru!==updated)applyRemote(r);setSync("☁️ Synchronisé")}
         return}
-      if(r&&ru>updated){applyRemote(r);if(r.fromClaude===ru)showBanner();setSync("☁️ Synchronisé")}
+      if(r&&ru>updated){applyRemote(r);if(r.fromClaude===ru)showBanner(r.fromClaudeRecap?"Récap reçu de Claude ✓":"");setSync("☁️ Synchronisé")}
     },e=>{console.error(e);setSync("⚠️ Synchro refusée")});
     addEventListener("online",()=>push());
   }catch(e){console.error(e);setSync("⚠️ Hors ligne")}
@@ -715,6 +719,12 @@ function startSync(onReady){
 /* ---------- rapport envoyé par Claude via l'adresse ?r=1&... ---------- */
 function urlPatch(){
   const q=new URLSearchParams(location.search);
+  if(q.has("recap")){
+    /* lignes séparées par « | » ; « ch3 » ou « ch. 3 » → #3 */
+    const t=String(q.get("recap")||"").split("|").map(x=>x.replace(/\s+$/,"")).join("\n").replace(/\bch\.?\s*(\d+)\b/gi,"#$1").trim();
+    history.replaceState(null,"",location.pathname+"#recap");
+    return{recapOnly:true,recap:t};
+  }
   if(!q.has("r"))return null;
   const nums=v=>(String(v||"").match(/\d+/g)||[]);
   const p={};
@@ -728,6 +738,7 @@ function urlPatch(){
 }
 function applyPatch(base,p){
   const ns=clean(base);
+  if(p.recapOnly){ns.recap=p.recap;ns.recapAt=Date.now();return ns}
   ns.ast=p.ast;ns.mab=p.mab;ns.mabDone=[];ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};if(p.pdjList){ns.pdjList=p.pdjList.map(a=>Object.assign({note:""},a));ns.pdjText=""}
   return ns;
 }
@@ -790,8 +801,29 @@ function claudePrompt(){
   ].join("\n");
 }
 
+function recapPrompt(){
+  const jour=fmt(todayISO(),0),demain=fmt(todayISO(),1);
+  return [
+`Fais-moi le récap Asterio du ${jour} (ce que je dois savoir en arrivant au travail), avec Claude in Chrome sur mon Mac.`,
+``,
+`1. Asterio : regarde d'abord les onglets de ton groupe. S'il y a déjà un onglet Asterio connecté, utilise-le. Sinon ouvre UN SEUL onglet sur ${ASTERIO}. Si la page de connexion s'affiche, ne tape rien : demande-moi de cliquer sur « Se connecter » sur le Mac et attends que je réponde « fait ». Jamais de code PIN : menu grille en haut à gauche → Front-Office → planning Hébergement.`,
+`Règles : ne modifie rien. Ouvre chaque fiche de séjour (clic sur la barre) et ferme-la en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Si les observations sont coupées, fais défiler la fiche. Laisse l'onglet Asterio ouvert à la fin.`,
+``,
+`2. Le récap (texte simple, phrases courtes, qui se lit aussi à voix haute ; pas de tableau, pas de caractères # & ou +, écris les chambres « ch3 ») :`,
+`- Ce soir : chambres occupées sur 9, chambres libres.`,
+`- Déjà arrivés (statut Présent) : chambre, nom, pax, solde restant.`,
+`- Arrivées attendues (statut Confirmé) : chambre, nom, pax, points d'attention (lit bébé, animal, heure d'arrivée, surclassement, PDJ…).`,
+`- Demain ${demain} : départs, arrivées, recouches, PDJ repérés (à confirmer dans les dossiers), événements notés en haut du planning.`,
+``,
+`3. Envoie-le dans mon app : ouvre dans ton groupe ${APP_URL}?recap=TEXTE en mettant une ligne par élément, les lignes séparées par « | » et les espaces remplacés par « + ». Attends « Envoyé au téléphone ✓ » sous le titre, puis ferme cet onglet (garde celui d'Asterio).`,
+``,
+`4. Réponds-moi avec le même récap, court et lisible.`
+  ].join("\n");
+}
+
 /* ---------- événements ---------- */
-const setClaudeLink=()=>{$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt())};
+const setClaudeLink=()=>{$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt());$("recapClaudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(recapPrompt())};
+$("recapClaudeBtn").addEventListener("click",()=>{try{navigator.clipboard.writeText(recapPrompt()).catch(()=>{})}catch(e){}});
 $("repDate").value=repDate;setClaudeLink();
 $("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();setClaudeLink();refresh()};
 /* la demande est aussi copiée, au cas où Claude s'ouvrirait vide */
@@ -858,14 +890,14 @@ async function printText(t,big,name){
     console.error(e);toast("Impression impossible : réessaie (connexion internet nécessaire)");
   }
 }
-$("printBtn").onclick=()=>tab==="pdj"?printText(pdjText(),true,"Petit-dejeuner"):tab==="commande"?printText(buildOrder(),true,"Commande-boulangerie"):printText(build(),false,"Rapport-de-shift");
+$("printBtn").onclick=()=>tab==="recap"?printText(s.recap.trim(),false,"Recap"):tab==="pdj"?printText(pdjText(),true,"Petit-dejeuner"):tab==="commande"?printText(buildOrder(),true,"Commande-boulangerie"):printText(build(),false,"Rapport-de-shift");
 $("importBtn").onclick=()=>{const ns=parseReport($("pasteArea").value);
   if(!ns){toast("Format non reconnu");return}
   s=ns;$("pasteArea").value="";renderAll();commit();toast("Rapport importé ✓")};
 $("copy").onclick=async()=>{const txt=tabText();if(!txt){toast("Rien à copier");return}try{await navigator.clipboard.writeText(txt);toast("Copié")}catch(e){
   if(tab==="pdj"){$("pdjPreview").select();toast("Sélectionné — copie manuelle");return}
   const r=document.createRange();r.selectNodeContents($(tab==="commande"?"orderPreview":"preview"));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast("Sélectionné — copie manuelle")}};
-$("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes,kt=s.orderTime;s=blank();s.notes=keep;s.orderTime=kt;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";$("reset").classList.remove("armed");renderAll();commit();toast("Rapport vidé (précisions gardées)")}
+$("reset").onclick=()=>{if($("reset").dataset.c){const keep=s.notes,kt=s.orderTime,rc=s.recap,ra=s.recapAt;s=blank();s.notes=keep;s.orderTime=kt;s.recap=rc;s.recapAt=ra;delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";$("reset").classList.remove("armed");renderAll();commit();toast("Rapport vidé (précisions gardées)")}
   else{$("reset").dataset.c="1";$("reset").textContent="Vider ?";$("reset").classList.add("armed");setTimeout(()=>{delete $("reset").dataset.c;$("reset").textContent="Nouveau rapport";$("reset").classList.remove("armed")},3000)}};
 
 $("date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"});
@@ -874,11 +906,11 @@ applyDefaultsOnce();
 const patch=urlPatch();
 if(patch){
   /* garde ce qui a été saisi sur le téléphone et remplace seulement ce que Claude a lu dans Asterio */
-  s=applyPatch(s,patch);updated=Date.now();saveLocal();renderAll();showBanner();
+  s=applyPatch(s,patch);updated=Date.now();saveLocal();renderAll();showBanner(patch.recapOnly?"Récap reçu de Claude ✓":"");
   startSync(r=>{
     if(r&&r.s)s=applyPatch(Object.assign({},r.s,{perm:r.perm}),patch);
     updated=Date.now();saveLocal();renderAll();
-    push({fromClaude:updated}).then(()=>setSync("☁️ Envoyé au téléphone ✓"));
+    push(Object.assign({fromClaude:updated},patch.recapOnly?{fromClaudeRecap:true}:{fromClaudeRecap:null})).then(()=>setSync("☁️ Envoyé au téléphone ✓"));
   });
 }else{renderAll();startSync()}
 showTab((location.hash||"").replace("#",""));
@@ -938,22 +970,16 @@ function spokenReport(){
   P.push("Voilà, bonne soirée à tous !");
   return oral(P.join("\n\n"));
 }
-const spokenText=()=>tab==="pdj"?oral("Petit-déjeuner de demain.\n"+pdjText()):tab==="commande"?oral(buildOrder()):spokenReport();
+const spokenText=()=>oral(s.recap.trim()?s.recap:spokenReport());
 
 let voiceFile=null,voiceUrl=null;
 function resetVoiceOut(){voiceFile=null;if(voiceUrl){URL.revokeObjectURL(voiceUrl);voiceUrl=null}$("voiceAudio").removeAttribute("src");$("voiceOut").classList.add("hidden")}
-function openVoice(){
-  const c=voiceCfg();$("voiceKey").value=c.key;$("voiceName").value=c.voice;
-  $("voiceCfgBox").open=!c.key;
-  $("voiceText").value=spokenText();resetVoiceOut();
-  $("voiceSheet").classList.remove("hidden");document.body.style.overflow="hidden";
-}
-function closeVoice(){$("voiceSheet").classList.add("hidden");document.body.style.overflow="";try{$("voiceAudio").pause()}catch(e){}}
+function initVoiceCfg(){const c=voiceCfg();$("voiceKey").value=c.key;$("voiceName").value=c.voice;$("voiceCfgBox").open=!c.key}
 async function makeVoice(){
-  const c=voiceCfg(),text=$("voiceText").value.trim();
+  const c=voiceCfg(),text=spokenText().trim();
   if(!text){toast("Rien à lire");return}
   if(!c.key){$("voiceCfgBox").open=true;$("voiceKey").focus();toast("Ajoute d'abord ta clé OpenAI");return}
-  const b=$("voiceMake");b.disabled=true;b.textContent="Création du vocal…";resetVoiceOut();
+  const b=$("voiceMake");b.disabled=true;b.textContent="Création du vocal…";$("voiceAgain").disabled=true;resetVoiceOut();
   try{
     const r=await fetch("https://api.openai.com/v1/audio/speech",{method:"POST",
       headers:{"Authorization":"Bearer "+c.key,"Content-Type":"application/json"},
@@ -963,11 +989,11 @@ async function makeVoice(){
       throw new Error(r.status===401?"Clé OpenAI refusée":r.status===429?"Quota OpenAI dépassé ou crédit épuisé":m||("Erreur "+r.status))}
     const blob=await r.blob();
     const [y,m,d]=repDate.split("-");
-    voiceFile=new File([blob],`Rapport-${d}-${m}.mp3`,{type:"audio/mpeg"});
+    voiceFile=new File([blob],`Recap-${d}-${m}.mp3`,{type:"audio/mpeg"});
     voiceUrl=URL.createObjectURL(blob);$("voiceAudio").src=voiceUrl;
     $("voiceOut").classList.remove("hidden");toast("Vocal prêt ✓");
   }catch(e){console.error(e);toast(e&&e.message&&!/fetch/i.test(e.message)?e.message:"Vocal impossible : vérifie la connexion")}
-  finally{b.disabled=false;b.textContent="Créer le vocal"}
+  finally{b.disabled=false;$("voiceAgain").disabled=false;b.textContent="🎙️ Créer le vocal"}
 }
 /* le partage doit partir directement du toucher (iPhone) : le fichier est donc préparé avant */
 async function shareVoice(){
@@ -978,18 +1004,15 @@ async function shareVoice(){
       toast("Fichier téléchargé : envoie-le dans WhatsApp")}
   }catch(e){if(e&&e.name==="AbortError")return;console.error(e);toast("Partage impossible ici")}
 }
-$("voiceBtn").onclick=openVoice;
-$("voiceClose").onclick=closeVoice;
-$("voiceSheet").addEventListener("click",e=>{if(e.target===$("voiceSheet"))closeVoice()});
-$("voiceRegen").onclick=()=>{$("voiceText").value=spokenText();resetVoiceOut();toast("Texte refait")};
-$("voiceText").oninput=resetVoiceOut;
+initVoiceCfg();
+$("recapText").addEventListener("input",()=>{s.recap=$("recapText").value;resetVoiceOut();commit()});
 $("voiceKey").onchange=()=>{const c=voiceCfg();c.key=$("voiceKey").value.trim();saveVoiceCfg(c);if(c.key)toast("Clé enregistrée sur ce téléphone")};
 $("voiceName").onchange=()=>{const c=voiceCfg();c.voice=$("voiceName").value;saveVoiceCfg(c);resetVoiceOut()};
 $("voiceMake").onclick=makeVoice;$("voiceAgain").onclick=makeVoice;
 $("voiceShare").onclick=shareVoice;
 
 /* pour les tests */
-window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
+window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,recapPrompt,urlPatch,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
