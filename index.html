@@ -200,9 +200,9 @@ textarea.recap{min-height:260px;background:var(--sheet);border:none;border-radiu
 <!-- ========== RAPPORT ========== -->
 <div id="tab-rapport">
   <div class="claude">
-    <a id="claudeBtn" href="https://claude.ai/new" target="_blank" rel="noopener">Remplir avec Claude</a>
+    <a id="claudeBtn" href="https://claude.ai/new" target="_blank" rel="noopener">Tout remplir avec Claude</a>
     <input type="date" id="repDate" aria-label="Soir du rapport">
-    <p>Claude lit Asterio sur le Mac et remplit l'astreinte, le nettoyage et le petit-déjeuner.</p>
+    <p>Claude lit Asterio sur le Mac et remplit le rapport, le petit-déj et le récap. Tu n'as plus qu'à vérifier chaque onglet.</p>
   </div>
 
   <section class="sec">
@@ -308,11 +308,7 @@ textarea.recap{min-height:260px;background:var(--sheet);border:none;border-radiu
 
 <!-- ========== RÉCAP ========== -->
 <div id="tab-recap" class="hidden">
-  <div class="claude">
-    <a id="recapClaudeBtn" href="https://claude.ai/new" target="_blank" rel="noopener">Faire le récap avec Claude</a>
-    <span></span>
-    <p>Claude lit Asterio sur le Mac et remplit ce récap. Automatique à 15h10 (lun, mar, ven, sam, dim).</p>
-  </div>
+  <p class="hint" style="margin:14px 4px 0">Rempli en même temps que le rapport (« Tout remplir avec Claude » dans l'onglet Rapport), et tout seul à 15h10 les lun, mar, ven, sam et dim.</p>
   <section class="sec">
     <h2>Récap du jour <small>modifiable</small></h2>
     <div class="group">
@@ -702,6 +698,7 @@ function push(extra){
   catch(e){console.error(e);setSync("⚠️ Synchro impossible");return Promise.resolve()}
 }
 function applyRemote(r){s=clean(Object.assign({},r.s,{perm:r.perm}));if(r.rooms)rooms=arr(r.rooms).map(String);updated=r.updated||0;saveLocal();renderAll()}
+const patchMsg=p=>p.recapOnly?"Récap reçu de Claude ✓":p.recap!==undefined?"Rapport, petit-déj et récap reçus ✓":"Rapport reçu de Claude ✓";
 function showBanner(txt){const b=$("banner");b.textContent=txt||"Rapport reçu de Claude ✓";b.classList.add("show");setTimeout(()=>b.classList.remove("show"),8000)}
 function startSync(onReady){
   try{
@@ -725,7 +722,7 @@ function startSync(onReady){
         else if(!r||updated>ru)push();
         else{if(ru!==updated)applyRemote(r);setSync("☁️ Synchronisé")}
         return}
-      if(r&&ru>updated){applyRemote(r);if(r.fromClaude===ru)showBanner(r.fromClaudeRecap?"Récap reçu de Claude ✓":"");setSync("☁️ Synchronisé")}
+      if(r&&ru>updated){applyRemote(r);if(r.fromClaude===ru)showBanner(r.fromClaudeMsg||(r.fromClaudeRecap?"Récap reçu de Claude ✓":""));setSync("☁️ Synchronisé")}
     },e=>{console.error(e);setSync("⚠️ Synchro refusée")});
     addEventListener("online",()=>push());
   }catch(e){console.error(e);setSync("⚠️ Hors ligne")}
@@ -734,15 +731,12 @@ function startSync(onReady){
 /* ---------- rapport envoyé par Claude via l'adresse ?r=1&... ---------- */
 function urlPatch(){
   const q=new URLSearchParams(location.search);
-  if(q.has("recap")){
-    /* lignes séparées par « | » ; « ch3 » ou « ch. 3 » → #3 */
-    const t=String(q.get("recap")||"").split("|").map(x=>x.replace(/\s+$/,"")).join("\n").replace(/\bch\.?\s*(\d+)\b/gi,"#$1").trim();
-    history.replaceState(null,"",location.pathname+"#recap");
-    return{recapOnly:true,recap:t};
-  }
-  if(!q.has("r"))return null;
-  const nums=v=>(String(v||"").match(/\d+/g)||[]);
+  if(!q.has("r")&&!q.has("recap"))return null;
   const p={};
+  /* récap : lignes séparées par « | » ; « ch3 » ou « ch. 3 » → #3 */
+  if(q.has("recap"))p.recap=String(q.get("recap")||"").split("|").map(x=>x.replace(/\s+$/,"")).join("\n").replace(/\bch\.?\s*(\d+)\b/gi,"#$1").trim();
+  if(!q.has("r")){p.recapOnly=true;history.replaceState(null,"",location.pathname+"#recap");return p}
+  const nums=v=>(String(v||"").match(/\d+/g)||[]);
   p.ast=String(q.get("ast")||"").split(/[,;]/).map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(\d+)\s*:\s*(\d+)\s*(?::\s*(.*))?$/);return m?{room:m[1],pax:m[2],note:""}:null}).filter(Boolean);
   p.mab=nums(q.get("mab"));p.arr=nums(q.get("arr"));p.rec=nums(q.get("rec"));
   p.pdjPax=String(parseInt(q.get("pdj"))||"");
@@ -753,7 +747,8 @@ function urlPatch(){
 }
 function applyPatch(base,p){
   const ns=clean(base);
-  if(p.recapOnly){ns.recap=p.recap;ns.recapAt=Date.now();return ns}
+  if(p.recap!==undefined){ns.recap=p.recap;ns.recapAt=Date.now()}
+  if(p.recapOnly)return ns;
   ns.ast=p.ast;ns.mab=p.mab;ns.mabDone=[];ns.arr=p.arr;ns.rec=p.rec;ns.pdjPax=p.pdjPax;ns.pdjTables=p.pdjTables;ns.orderOv={};if(p.pdjList){ns.pdjList=p.pdjList.map(a=>Object.assign({note:""},a));ns.pdjText=""}
   return ns;
 }
@@ -798,47 +793,36 @@ function fmt(iso,add){const [y,m,d]=iso.split("-").map(Number);return new Date(y
 function claudePrompt(){
   const soir=fmt(repDate,0),lendemain=fmt(repDate,1);
   return [
-`Fais mon rapport de shift du soir du ${soir}, avec Claude in Chrome sur mon Mac.`,
+`Remplis tout mon shift du soir du ${soir} (rapport, petit-déj et récap), avec Claude in Chrome sur mon Mac (jamais sur ma tour PC : si plusieurs navigateurs sont connectés, prends celui du Mac).`,
 ``,
 `1. Asterio : regarde d'abord les onglets de ton groupe. S'il y a déjà un onglet Asterio connecté, utilise-le et n'en ouvre pas d'autre. Sinon, ouvre UN SEUL onglet sur ${ASTERIO}. Si la page de connexion s'affiche, ne tape rien : demande-moi de cliquer sur « Se connecter » sur le Mac (mes codes sont enregistrés dans Chrome) et attends que je réponde « fait ». Ne tape jamais de code PIN : passe par le menu (icône grille en haut à gauche) puis Front-Office pour avoir le planning Hébergement.`,
+``,
+`Règles : ne modifie rien. Ouvre une fiche en cliquant sur la barre de réservation et ferme-la en cliquant dans une zone vide à côté (le ✕ ouvre « Annuler le dossier » ; ne clique pas non plus sur l'icône calendrier-crayon ni sur la coche ✓). Pour sortir d'un dossier, clique QUITTER. Si les observations sont coupées, lis le texte complet de la fiche. Laisse l'onglet Asterio ouvert à la fin.`,
 ``,
 `2. Lis le planning (une colonne = une nuit) :`,
 `- ASTREINTE : chambres occupées la nuit du ${soir}, avec le nombre d'adultes de chaque réservation.`,
 `- NETTOYAGE pour le ${lendemain} : MÀB = départs, Arrivées = arrivées, Recouche = clients qui restent.`,
-`- PDJ du ${lendemain} matin : pour chaque chambre occupée, vérifie DEUX sources : (1) le dossier (icône dossier de la fiche) : compte les lignes « Petit-déjeuner » ou les prestations qui incluent le petit-déjeuner ; (2) les observations de la fiche (ex. « Pdj oui ») : si elles sont coupées à l'écran, lis le texte complet de la fiche. Une chambre a le PDJ si l'une des deux sources l'indique ; si elles ne disent pas la même chose, signale-le dans les points à vérifier. Une table par chambre (ex. « 1 table de 3, 1 table de 2 »).`,
-`Règles : ne modifie rien. Ferme une fiche en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Pour sortir d'un dossier, clique QUITTER. Laisse l'onglet Asterio ouvert à la fin.`,
+`- PDJ du ${lendemain} matin : pour chaque chambre occupée, vérifie DEUX sources : (1) le dossier (icône dossier de la fiche) : compte les lignes « Petit-déjeuner » ou les prestations qui incluent le petit-déjeuner ; (2) les observations de la fiche (ex. « Pdj oui »). Une chambre a le PDJ si l'une des deux sources l'indique ; si elles ne disent pas la même chose, signale-le dans les points à vérifier. Une table par chambre (ex. « 1 table de 3, 1 table de 2 »).`,
+`- ÉTAT DES CHAMBRES : dans la colonne de gauche, le nom de chaque chambre est en VERT (propre, amenities faites) ou en ROUGE (sale ou amenities pas faites). Zoome sur cette colonne pour lire la couleur de chaque chambre.`,
+`- RÉCAP : statut de chaque séjour (Présent = déjà arrivé, Confirmé ou Option = attendu), nom, pax, solde restant, points d'attention (lit bébé, animal, heure d'arrivée, surclassement, PDJ…), événements notés en haut du planning.`,
 ``,
-`3. Envoie le rapport dans mon app : ouvre dans ton groupe cette adresse en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte, et dans pdjch chambre:nombre de petits-déjeuners de chaque chambre ; numéros séparés par des virgules, rien après le = s'il n'y a rien, + à la place des espaces) :`,
-`${APP_URL}?r=1&ast=3:2,5:2&mab=3&arr=2,9&rec=5&pdj=4&pdjch=3:2,5:2&tables=2+tables+de+2`,
+`3. Écris le récap en texte simple, phrases courtes qui se lisent aussi à voix haute ; pas de tableau, pas de caractères # & ou +, écris les chambres « ch3 ». Une ligne par élément, avec ces titres seuls sur leur ligne :`,
+`- Première ligne : « Récap Asterio » + la date. Puis : chambres occupées ce soir sur 9, chambres libres.`,
+`- « Amenities et ménage » : d'abord les chambres en rouge qui ont une arrivée ce soir, puis les autres chambres en rouge, puis celles en vert. Ajoute une fois : « Le rouge peut aussi vouloir dire que la chambre n'a pas été repassée en vert, à vérifier sur place. »`,
+`- « Déjà arrivés » : une ligne par chambre, dans l'ordre croissant : chambre, nom, pax, solde restant, points d'attention.`,
+`- « Arrivées attendues » : une ligne par chambre, dans l'ordre croissant : chambre, nom, pax, statut si Option, couleur de la chambre, points d'attention.`,
+`- « Demain » + la date : départs, arrivées, recouches, PDJ, événements.`,
+``,
+`4. Envoie tout dans mon app en UNE SEULE adresse : ouvre-la dans ton groupe en remplaçant les exemples par les vraies valeurs (chambre:pax pour l'astreinte ; dans pdjch chambre:nombre de petits-déjeuners de chaque chambre ; numéros séparés par des virgules ; rien après le = s'il n'y a rien ; + à la place des espaces ; recap en dernier, ses lignes séparées par « | ») :`,
+`${APP_URL}?r=1&ast=3:2,5:2&mab=3&arr=2,9&rec=5&pdj=4&pdjch=3:2,5:2&tables=2+tables+de+2&recap=Récap+Asterio+du+...|Ligne+2|Ligne+3`,
 `Attends que la page affiche « Envoyé au téléphone ✓ » sous le titre, puis ferme cet onglet (garde celui d'Asterio).`,
 ``,
-`4. Réponds-moi en quelques lignes : le rapport, et les points à vérifier.`
-  ].join("\n");
-}
-
-function recapPrompt(){
-  const jour=fmt(todayISO(),0),demain=fmt(todayISO(),1);
-  return [
-`Fais-moi le récap Asterio du ${jour} (ce que je dois savoir en arrivant au travail), avec Claude in Chrome sur mon Mac.`,
-``,
-`1. Asterio : regarde d'abord les onglets de ton groupe. S'il y a déjà un onglet Asterio connecté, utilise-le. Sinon ouvre UN SEUL onglet sur ${ASTERIO}. Si la page de connexion s'affiche, ne tape rien : demande-moi de cliquer sur « Se connecter » sur le Mac et attends que je réponde « fait ». Jamais de code PIN : menu grille en haut à gauche → Front-Office → planning Hébergement.`,
-`Règles : ne modifie rien. Ouvre chaque fiche de séjour (clic sur la barre) et ferme-la en cliquant à côté (le ✕ ouvre « Annuler le dossier »). Si les observations sont coupées, fais défiler la fiche. Laisse l'onglet Asterio ouvert à la fin.`,
-``,
-`2. Le récap (texte simple, phrases courtes, qui se lit aussi à voix haute ; pas de tableau, pas de caractères # & ou +, écris les chambres « ch3 ») :`,
-`- Ce soir : chambres occupées sur 9, chambres libres.`,
-`- Déjà arrivés (statut Présent) : chambre, nom, pax, solde restant. Chambres dans l'ordre croissant.`,
-`- Arrivées attendues (statut Confirmé) : chambre, nom, pax, points d'attention (lit bébé, animal, heure d'arrivée, surclassement, PDJ…). Chambres dans l'ordre croissant.`,
-`- Demain ${demain} : départs, arrivées, recouches, PDJ repérés (à confirmer dans les dossiers), événements notés en haut du planning.`,
-``,
-`3. Envoie-le dans mon app : ouvre dans ton groupe ${APP_URL}?recap=TEXTE en mettant une ligne par élément, les lignes séparées par « | » et les espaces remplacés par « + ». Attends « Envoyé au téléphone ✓ » sous le titre, puis ferme cet onglet (garde celui d'Asterio).`,
-``,
-`4. Réponds-moi avec le même récap, court et lisible.`
+`5. Réponds-moi en quelques lignes : ce qui est rempli, et les points à vérifier (en tête : les chambres en rouge qui ont une arrivée ce soir).`
   ].join("\n");
 }
 
 /* ---------- événements ---------- */
-const setClaudeLink=()=>{$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt());$("recapClaudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(recapPrompt())};
-$("recapClaudeBtn").addEventListener("click",()=>{try{navigator.clipboard.writeText(recapPrompt()).catch(()=>{})}catch(e){}});
+const setClaudeLink=()=>{$("claudeBtn").href="https://claude.ai/new?q="+encodeURIComponent(claudePrompt())};
 $("repDate").value=repDate;setClaudeLink();
 $("repDate").onchange=()=>{repDate=$("repDate").value||todayISO();setClaudeLink();refresh()};
 /* la demande est aussi copiée, au cas où Claude s'ouvrirait vide */
@@ -921,11 +905,11 @@ applyDefaultsOnce();
 const patch=urlPatch();
 if(patch){
   /* garde ce qui a été saisi sur le téléphone et remplace seulement ce que Claude a lu dans Asterio */
-  s=applyPatch(s,patch);updated=Date.now();saveLocal();renderAll();showBanner(patch.recapOnly?"Récap reçu de Claude ✓":"");
+  s=applyPatch(s,patch);updated=Date.now();saveLocal();renderAll();showBanner(patchMsg(patch));
   startSync(r=>{
     if(r&&r.s)s=applyPatch(Object.assign({},r.s,{perm:r.perm}),patch);
     updated=Date.now();saveLocal();renderAll();
-    push(Object.assign({fromClaude:updated},patch.recapOnly?{fromClaudeRecap:true}:{fromClaudeRecap:null})).then(()=>setSync("☁️ Envoyé au téléphone ✓"));
+    push({fromClaude:updated,fromClaudeRecap:patch.recapOnly?true:null,fromClaudeMsg:patchMsg(patch)}).then(()=>setSync("☁️ Envoyé au téléphone ✓"));
   });
 }else{renderAll();startSync()}
 showTab((location.hash||"").replace("#",""));
@@ -1096,7 +1080,7 @@ $("voiceMake").onclick=makeVoice;$("voiceAgain").onclick=makeVoice;
 $("voiceShare").onclick=shareVoice;
 
 /* pour les tests */
-window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,recapPrompt,recapSpoken,spokenText,urlPatch,wavToMp3,piperSpeak,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
+window.__rapport={parseReport,build,buildOrder,buildPdj,parsePdjList,spokenReport,oral,recapSpoken,spokenText,urlPatch,wavToMp3,piperSpeak,setDate:d=>{repDate=d},claudePrompt,applyPatch,get s(){return s},set s(v){s=v}};
 </script>
 </body>
 </html>
